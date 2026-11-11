@@ -1,112 +1,130 @@
-#!/usr/bin/php -q
+#!/usr/bin/env php
 <?php
-/**
- * ownCloud - ocDownloader
- *
- * This file is licensed under the Affero General Public License version 3 or
- * later. See the LICENSE file.
- *
- * @author Xavier Beurois <www.sgc-univ.net>
- * @copyright Xavier Beurois 2015
- */
 
-class OCD
-{
-    private static $CurlHandler = null;
-    private static $ProgressFile = null;
-    private static $CHInfo = null;
-    private static $PFHandle = null;
+declare(strict_types=1);
 
-    public static function load($GID, $URI, $OPTIONS)
-    {
-        self::$ProgressFile = '/tmp/' . $GID . '.curl';
-        self::$PFHandle = fopen(self::$ProgressFile, 'w+');
+if (PHP_SAPI !== 'cli') {
+	http_response_code(403);
+	exit(1);
+}
 
-        self::$CurlHandler = curl_init();
+final class OcdCurlWorker {
+	public static function run(string $gid, string $uri, array $options): int {
+		if (preg_match('/^[a-zA-Z0-9_-]{4,64}$/', $gid) !== 1) {
+			return 1;
+		}
 
-        $DestFile = fopen(rtrim($OPTIONS['dir'], '/') . '/' . $OPTIONS['out'], 'w+');
+		$dir = isset($options['dir']) ? rtrim((string)$options['dir'], '/\\') : '';
+		$out = isset($options['out']) ? basename((string)$options['out']) : '';
+		if ($dir === '' || $out === '' || !is_dir($dir)) {
+			return 1;
+		}
 
-        curl_setopt_array(self::$CurlHandler, array(
-            CURLOPT_FILE => $DestFile,
-            CURLOPT_URL => $URI
-        ));
-        self::curlSetBasicOptions();
-        self::curlSetAdvancedOptions($OPTIONS);
+		$progressFile = rtrim(sys_get_temp_dir(), '/\\') . '/ocdownloader_' . $gid . '.curl';
+		$pid = (int)(getmypid() ?: 0);
+		@file_put_contents($progressFile, "active;0;0;0;{$pid}\n");
 
-        curl_exec(self::$CurlHandler);
-        curl_close(self::$CurlHandler);
-        fclose($DestFile);
-    }
+		$destPath = $dir . '/' . $out;
+		$destHandle = @fopen($destPath, 'wb');
+		if (!is_resource($destHandle)) {
+			@file_put_contents($progressFile, "error;0;0;0;{$pid}\n", FILE_APPEND);
+			return 1;
+		}
 
-    private static function writeProgress($DownloadStatus = 0)
-    {
-        if (self::$CHInfo['download_content_length'] != -1 && is_resource(self::$PFHandle)) {
-            $State = $DownloadStatus == 0 ? 'active' :($DownloadStatus == 1 ? 'complete' : 'error');
-            $Downloaded = $DownloadStatus == 2 ? 0 : self::$CHInfo['size_download'];
-            $Size = $DownloadStatus == 2 ? 0 : self::$CHInfo['download_content_length'];
-            $Speed = $DownloadStatus == 2 ? 0 : self::$CHInfo['speed_download'];
+		$ch = curl_init($uri);
+		if ($ch === false) {
+			fclose($destHandle);
+			@file_put_contents($progressFile, "error;0;0;0;{$pid}\n", FILE_APPEND);
+			return 1;
+		}
 
-            if (($PID = getmypid()) === false) {
-                $PID = 0;
-            }
+		$lastWrite = 0.0;
+		$allowedProtocols = CURLPROTO_HTTP | CURLPROTO_HTTPS | CURLPROTO_FTP | CURLPROTO_FTPS;
 
-            fwrite(self::$PFHandle, $State . ';' . $Downloaded . ';' . $Size . ';' . $Speed . ';' . $PID . "\n");
-        }
-    }
+		curl_setopt_array($ch, [
+			CURLOPT_FILE => $destHandle,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_MAXREDIRS => 5,
+			CURLOPT_CONNECTTIMEOUT => 15,
+			CURLOPT_PROTOCOLS => $allowedProtocols,
+			CURLOPT_REDIR_PROTOCOLS => $allowedProtocols,
+			CURLOPT_NOPROGRESS => false,
+			CURLOPT_PROGRESSFUNCTION => static function ($resource, int $dlTotal, int $dlNow) use (&$ch, &$lastWrite, $progressFile, $pid): int {
+				$now = microtime(true);
+				if (($now - $lastWrite) < 0.4) {
+					return 0;
+				}
+				$lastWrite = $now;
+				$info = curl_getinfo($ch);
+				$speed = isset($info['speed_download']) ? (int)$info['speed_download'] : 0;
+				$total = $dlTotal > 0 ? $dlTotal : $dlNow;
+				@file_put_contents($progressFile, "active;{$dlNow};{$total};{$speed};{$pid}\n", FILE_APPEND);
+				return 0;
+			},
+		]);
 
-    private static function curlSetBasicOptions()
-    {
-        // Basic options
-        curl_setopt_array(self::$CurlHandler, array(
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 20,
-            CURLOPT_NOPROGRESS => false,
-            CURLOPT_PROGRESSFUNCTION => function ($Resource, $TotalDL, $Downloaded, $UpSize, $Uploaded) {
-                self::$CHInfo = curl_getinfo(self::$CurlHandler);
+		if (!empty($options['http-user']) && isset($options['http-passwd'])) {
+			curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+			curl_setopt($ch, CURLOPT_USERPWD, $options['http-user'] . ':' . $options['http-passwd']);
+		}
+		if (!empty($options['ftp-user']) && isset($options['ftp-passwd'])) {
+			curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+			curl_setopt($ch, CURLOPT_USERPWD, $options['ftp-user'] . ':' . $options['ftp-passwd']);
+		}
+		if (isset($options['ftp-pasv'])) {
+			curl_setopt($ch, CURLOPT_FTP_USE_EPSV, (bool)$options['ftp-pasv']);
+		}
+		if (!empty($options['referer'])) {
+			curl_setopt($ch, CURLOPT_REFERER, (string)$options['referer']);
+		}
+		if (!empty($options['user-agent'])) {
+			curl_setopt($ch, CURLOPT_USERAGENT, (string)$options['user-agent']);
+		}
+		if (!empty($options['all-proxy'])) {
+			curl_setopt($ch, CURLOPT_PROXY, (string)$options['all-proxy']);
+			if (!empty($options['all-proxy-user']) && isset($options['all-proxy-passwd'])) {
+				curl_setopt($ch, CURLOPT_PROXYUSERPWD, $options['all-proxy-user'] . ':' . $options['all-proxy-passwd']);
+			}
+		}
+		if (!empty($options['max-download-limit'])) {
+			$limitKb = (int)rtrim((string)$options['max-download-limit'], 'Kk');
+			if ($limitKb > 0) {
+				curl_setopt($ch, CURLOPT_MAX_RECV_SPEED_LARGE, $limitKb * 1024);
+			}
+		}
 
-                if (self::$CHInfo['size_download'] == self::$CHInfo['download_content_length'] && self::$CHInfo['http_code'] == 200) {
-                    self::writeProgress(1);
-                    if (is_resource(self::$PFHandle)) {
-                        fclose(self::$PFHandle);
-                    }
-                } else {
-                    self::writeProgress();
-                }
-            },
-        ));
-    }
+		$ok = curl_exec($ch);
+		$info = curl_getinfo($ch);
+		$errno = curl_errno($ch);
+		curl_close($ch);
+		fclose($destHandle);
 
-    private static function curlSetAdvancedOptions($OPTIONS)
-    {
-        if (isset($OPTIONS['http-user']) && isset($OPTIONS['http-passwd'])) {
-            curl_setopt(self::$CurlHandler, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-            curl_setopt(self::$CurlHandler, CURLOPT_USERPWD, $OPTIONS['http-user'] . ':' . $OPTIONS['http-passwd']);
-        }
-        if (isset($OPTIONS['ftp-user']) && isset($OPTIONS['ftp-passwd'])) {
-            curl_setopt(self::$CurlHandler, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-            curl_setopt(self::$CurlHandler, CURLOPT_USERPWD, $OPTIONS['ftp-user'] . ':' . $OPTIONS['ftp-passwd']);
-        }
-        if (isset($OPTIONS['ftp-pasv'])) {
-            curl_setopt(self::$CurlHandler, CURLOPT_FTP_USE_EPSV, $OPTIONS['ftp-pasv']);
-        }
-        if (isset($OPTIONS['referer'])) {
-            curl_setopt(self::$CurlHandler, CURLOPT_REFERER, $OPTIONS['referer']);
-        }
-        if (isset($OPTIONS['user-agent'])) {
-            curl_setopt(self::$CurlHandler, CURLOPT_USERAGENT, $OPTIONS['user-agent']);
-        }
-        if (isset($OPTIONS['all-proxy'])) {
-            curl_setopt(self::$CurlHandler, CURLOPT_PROXY, $OPTIONS['all-proxy']);
-            if (isset($OPTIONS['all-proxy-user']) && isset($OPTIONS['all-proxy-passwd'])) {
-                curl_setopt(self::$CurlHandler, CURLOPT_PROXYUSERPWD, $OPTIONS['all-proxy-user'] . ':' . $OPTIONS['all-proxy-passwd']);
-            }
-        }
-        if (isset($OPTIONS['max-download-limit'])) {
-            $OPTIONS['max-download-limit'] =(rtrim($OPTIONS['max-download-limit'], 'K')) * 1024;
-            curl_setopt(self::$CurlHandler, CURLOPT_MAX_RECV_SPEED_LARGE, $OPTIONS['max-download-limit']);
-        }
-    }
+		$httpCode = isset($info['http_code']) ? (int)$info['http_code'] : 0;
+		$downloaded = is_file($destPath) ? (int)filesize($destPath) : 0;
+		$total = isset($info['download_content_length']) && (int)$info['download_content_length'] > 0
+			? (int)$info['download_content_length']
+			: $downloaded;
+
+		if ($ok !== false && $errno === 0 && ($httpCode === 0 || ($httpCode >= 200 && $httpCode < 400))) {
+			@file_put_contents($progressFile, "complete;{$downloaded};{$total};0;{$pid}\n", FILE_APPEND);
+			return 0;
+		}
+
+		@unlink($destPath);
+		@file_put_contents($progressFile, "error;0;0;0;{$pid}\n", FILE_APPEND);
+		return 1;
+	}
 }
 
 set_time_limit(0);
-OCD::load($argv[1], urldecode($argv[2]), json_decode(urldecode($argv[3]), true, 512, JSON_HEX_APOS | JSON_HEX_QUOT));
+if ($argc < 4) {
+	exit(1);
+}
+$gid = (string)$argv[1];
+$uri = str_contains($argv[2], '://') ? (string)$argv[2] : rawurldecode((string)$argv[2]);
+$rawOptions = (string)$argv[3];
+$decoded = json_decode($rawOptions, true);
+if (!is_array($decoded)) {
+	$decoded = json_decode(rawurldecode($rawOptions), true);
+}
+exit(OcdCurlWorker::run($gid, $uri, is_array($decoded) ? $decoded : []));

@@ -1,43 +1,45 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OCA\Ocdownloader\Settings;
 
-use OC;
-use OCA\ocDownloader\Controller\Lib\Settings;
+use OCA\Ocdownloader\Service\SettingsService;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\IGroupManager;
+use OCP\IUserSession;
 use OCP\Settings\ISettings;
 
 class Personal implements ISettings {
+	public function __construct(
+		private SettingsService $settings,
+		private IUserSession $userSession,
+		private IGroupManager $groupManager,
+	) {
+	}
 
-    public function getForm() {
+	public function getForm(): TemplateResponse {
+		$user = $this->userSession->getUser();
+		$uid = $user !== null ? $user->getUID() : '';
+		$isAdmin = $uid !== '' && $this->groupManager->isAdmin($uid);
 
-        $settings = new Settings();
-        $settings->setKey('AllowProtocolBT');
-        $allowProtocolBT = $settings->getValue();
-        $allowProtocolBT = is_null($allowProtocolBT) ? true : strcmp($allowProtocolBT, 'Y') == 0;
+		$personalValues = $this->settings->getAllPersonalValues($uid);
+		$parameters = [
+			'AllowProtocolBT' => $this->settings->isProtocolAllowed('AllowProtocolBT', $isAdmin) && $this->settings->isAria2(),
+			'OCDS_DownloadsFolder' => $personalValues['DownloadsFolder'] ?? 'Downloads',
+			'OCDS_TorrentsFolder' => $personalValues['TorrentsFolder'] ?? 'Downloads/Files/Torrents',
+			'OCDS_BTRatioToReach' => $personalValues['BTRatioToReach'] ?? '0.0',
+			'OCDS_BTSeedTimeToReach_BTSeedTimeToReachUnit' => $personalValues['BTSeedTimeToReach_BTSeedTimeToReachUnit'] ?? '1_w',
+		];
 
-        $parameters = [
-            'AllowProtocolBT' => $allowProtocolBT,
-        ];
+		return new TemplateResponse('ocdownloader', 'settings/personal', $parameters, '');
+	}
 
-        $settings->setTable('personal');
-        $settings->setUID(OC::$server->getUserSession()->isLoggedIn());
-        $rows = $settings->getAllValues();
+	public function getSection(): string {
+		return 'ocdownloader';
+	}
 
-        while ($row = $rows->fetchRow()) {
-            $parameters['OCDS_' . $row['KEY']] = $row['VAL'];
-        }
-
-        return new TemplateResponse('ocdownloader', 'settings/personal', $parameters);
-
-    }
-
-    public function getSection() {
-        return 'additional';
-    }
-
-    public function getPriority() {
-        return 50;
-    }
-
+	public function getPriority(): int {
+		return 50;
+	}
 }

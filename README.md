@@ -1,7 +1,5 @@
 # ocDownloader
-ocDownloader is an AGPL-licensed application for [Nextcloud](https://nextcloud.com) which allows you to download files from HTTP(S)/FTP(S)/Youtube/Bittorrent using the ARIA2 download manager/Curl and youtube-dl.
-
-***I'm looking for maintainers and translators, every kind of support (especially pull requests) is highly welcome***.
+ocDownloader is an AGPL-licensed download manager for [Nextcloud](https://nextcloud.com) (**Nextcloud 28 - 35**, **PHP 8.1 - 8.5**) which allows you to download files from HTTP(S), FTP(S), video platforms, Magnet links, and BitTorrent files using Aria2, cURL, and `yt-dlp` (with fallback to `youtube-dl`).
 
 ## Companion apps/extensions for Firefox/Chrome/Opera/Vivaldi and Windows/MacOS/Linux/Android
 
@@ -35,17 +33,16 @@ You have to enable the RPC interface and save the session file of Aria2, otherwi
 
 You can find the documentation of Aria2 [here](https://aria2.github.io/manual/en/html/index.html).
 
-## Youtube-dl installation
-To download Youtube videos, you have to install youtube-dl. The packages shipped with distributions are very outdated most of the time. To get around this, you can use the Python Package Installer (pip) to get the most recent youtube-dl binaries. On Debian/Ubuntu, you can use the following commands to install youtube-dl through the Python Package Installer:
+## yt-dlp installation
+To download online videos and audio streams, install `yt-dlp` (preferred) or `youtube-dl`:
 
+```bash
+apt-get update && apt-get install -y python3 ffmpeg
+curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+chmod 0755 /usr/local/bin/yt-dlp
 ```
-apt-get install python-pip
-pip install youtube-dl
-```
 
-For other distributions or if you don't want to use the Python Package Installer, you can [install youtube-dl manually](https://rg3.github.io/youtube-dl/download.html). *Note : You have to install Python on your server. This a requierement for youtube-dl.*  
-
-After installing youtube-dl, you have to set the right path to your youtube-dl executeable in the admin settings of ocDownloader.
+After installing `yt-dlp`, verify or set the binary path (default `/usr/local/bin/yt-dlp`) in **Administration settings -> ocDownloader**.
 
 ## Using Curl instead of Aria2
 If you don't have Aria2 available on your server, you can use Curl which is directly integrated into PHP. This allows you to make HTTP(S) and FTP(S) downloads (BitTorrent is not supported by Curl). You need to install the PHP Curl module, on Debian you can use the following command to do this:
@@ -87,9 +84,16 @@ If you have problems with Curl, the log files are saved to the /tmp folder on yo
 e-alfred  
 Nibbels  
 Loki3000  
-(formerly) Xavier Beurois
+(formerly) Xavier Beurois  
+André Théo LAURET
 
-## Releases notes
+## Release notes
+### v2.0.0
+- Full modernization for Nextcloud 28 - 35 and PHP 8.1 - 8.5
+- Migrated to PSR-4 architecture (`OCA\Ocdownloader\`), modern Nextcloud dependency injection (`IDBConnection`, `IRootFolder`, `IUserSession`, `IConfig`, `IL10N`), and `SimpleMigrationStep` database migrations
+- Replaced legacy jQuery UI scripts with CSP-compliant vanilla ES6 frontend
+- Added `yt-dlp` support (with `youtube-dl` fallback), SSRF protection on user URLs, and automatic local `aria2c` RPC startup and Nextcloud Files indexing
+
 ### v1.8.0 [unreleased]
 - Removed Nextcloud 20 support (min version is now 21)
 - Added Nextcloud 23 support

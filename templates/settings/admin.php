@@ -1,151 +1,153 @@
 <?php
 /**
- * ownCloud - ocDownloader
- *
- * This file is licensed under the Affero General Public License version 3 or
- * later. See the LICENSE file.
- *
- * @author Xavier Beurois <www.sgc-univ.net>
- * @copyright Xavier Beurois 2015
- *
  * @var array $_
- * @var IL10N $l
+ * @var \OCP\IL10N $l
  */
 
-use OCP\IL10N;
+use OCP\Util;
 
-script('ocdownloader', 'settings/admin');
-style('ocdownloader', 'settings/admin');
+Util::addScript('ocdownloader', 'settings/admin');
+Util::addStyle('ocdownloader', 'settings/admin');
 
+$wd = $_['OCDS_WhichDownloader'] ?? 'ARIA2';
+$isAria2 = $wd === 'ARIA2';
+$allowBT = ($_['OCDS_AllowProtocolBT'] ?? 'Y') === 'Y';
 ?>
 <form id="ocdownloader" class="section">
 	<h2>ocDownloader</h2>
 	<p>
-		<span class="info"><?php print ($l->t ('Leave fields blank to reset a setting value')); ?></span>
-		<span id="OCDSLoaderYTDLBinary" class="OCDSLoader icon-loading-small"></span><span id="OCDSLoaderYTDLBinaryMsg" class="msg"></span>
+		<span class="info"><?php p($l->t('yt-dlp / youtube-dl settings (leave blank to reset to defaults)')); ?></span>
+		<span id="OCDSLoaderYTDLBinary" class="OCDSLoader icon-loading-small"></span>
+		<span id="OCDSLoaderYTDLBinaryMsg" class="msg"></span>
+		<span id="OCDSLoaderYTDLAudioFormat" class="OCDSLoader icon-loading-small"></span>
+		<span id="OCDSLoaderYTDLAudioFormatMsg" class="msg"></span>
+		<span id="OCDSLoaderYTDLVideoFormat" class="OCDSLoader icon-loading-small"></span>
+		<span id="OCDSLoaderYTDLVideoFormatMsg" class="msg"></span>
 	</p>
 	<p>
-		<label for="OCDYTDLBinary"><?php print ($l->t ('YouTube DL Binary Path')); ?></label>
-		<input type="text" class="OCDYTDLBinary ToUse" id="OCDYTDLBinary" data-loader="OCDSLoaderYTDLBinary" value="<?php print (isset ($_['OCDS_YTDLBinary']) ? $_['OCDS_YTDLBinary'] : '/usr/local/bin/youtube-dl'); ?>" />
+		<label for="OCDYTDLBinary"><?php p($l->t('yt-dlp / youtube-dl Binary Path')); ?></label>
+		<input type="text" class="OCDYTDLBinary ToUse" id="OCDYTDLBinary" data-loader="OCDSLoaderYTDLBinary" value="<?php p($_['OCDS_YTDLBinary'] ?? '/usr/local/bin/yt-dlp'); ?>" placeholder="/usr/local/bin/yt-dlp" />
 	</p>
 	<p>
-		<label for="OCDYTDLAudoFormat"><?php print ($l->t ('YouTube DL Audio Format')); ?></label>
-		<input type="text" class="OCDYTDLAudioFormat ToUse" id="OCDYTDLAudioFormat" data-loader="OCDSLoaderYTDLAudioFormat" value="<?php print (isset ($_['OCDS_YTDLAudioFormat']) ? $_['OCDS_YTDLAudioFormat'] : 'bestaudio[abr<=75]'); ?>" />
+		<label for="OCDYTDLAudioFormat"><?php p($l->t('Audio Format')); ?></label>
+		<input type="text" class="OCDYTDLAudioFormat ToUse" id="OCDYTDLAudioFormat" data-loader="OCDSLoaderYTDLAudioFormat" value="<?php p($_['OCDS_YTDLAudioFormat'] ?? 'bestaudio'); ?>" />
 	</p>
 	<p>
-		<label for="OCDYTDLAudoFormat"><?php print ($l->t ('YouTube DL Video Format')); ?></label>
-		<input type="text" class="OCDYTDLVideoFormat ToUse" id="OCDYTDLVideoFormat" data-loader="OCDSLoaderYTDLVideoFormat" value="<?php print (isset ($_['OCDS_YTDLVideoFormat']) ? $_['OCDS_YTDLVideoFormat'] : 'best[width<=1280]'); ?>" />
+		<label for="OCDYTDLVideoFormat"><?php p($l->t('Video Format')); ?></label>
+		<input type="text" class="OCDYTDLVideoFormat ToUse" id="OCDYTDLVideoFormat" data-loader="OCDSLoaderYTDLVideoFormat" value="<?php p($_['OCDS_YTDLVideoFormat'] ?? 'best[width<=1280]/best'); ?>" />
 	</p>
 	<hr />
-	<div style="clear:both;"></div>
+	<div class="ocd-clear"></div>
 	<p>
-		<span class="info"><?php print ($l->t ('Proxy settings')); ?></span>
-		<span id="OCDSLoaderProxySettings" class="OCDSLoader icon-loading-small"></span><span id="OCDSLoaderProxySettingsMsg" class="msg"></span>
+		<span class="info"><?php p($l->t('Proxy settings')); ?></span>
+		<span id="OCDSLoaderProxySettings" class="OCDSLoader icon-loading-small"></span>
+		<span id="OCDSLoaderProxySettingsMsg" class="msg"></span>
 	</p>
 	<p>
-		<label for="OCDProxyAddress"><?php print ($l->t ('Proxy Address')); ?></label>
-		<input type="text" class="OCDProxyAddress ToUse" id="OCDProxyAddress" data-loader="OCDSLoaderProxySettings" value="<?php print (isset ($_['OCDS_ProxyAddress']) ? $_['OCDS_ProxyAddress'] : ''); ?>" placeholder="http://" />
-		<label for="OCDProxyPort"><?php print ($l->t ('Proxy Port')); ?></label>
-		<input type="text" class="OCDProxyPort ToUse" id="OCDProxyPort" data-loader="OCDSLoaderProxySettings" value="<?php print (isset ($_['OCDS_ProxyPort']) ? $_['OCDS_ProxyPort'] : ''); ?>" placeholder="8080" />
+		<label for="OCDProxyAddress"><?php p($l->t('Proxy Address')); ?></label>
+		<input type="text" class="OCDProxyAddress ToUse" id="OCDProxyAddress" data-loader="OCDSLoaderProxySettings" value="<?php p($_['OCDS_ProxyAddress'] ?? ''); ?>" placeholder="http://proxy.example.com" />
+		<label for="OCDProxyPort"><?php p($l->t('Proxy Port')); ?></label>
+		<input type="text" class="OCDProxyPort ToUse" id="OCDProxyPort" data-loader="OCDSLoaderProxySettings" value="<?php p($_['OCDS_ProxyPort'] ?? ''); ?>" placeholder="8080" />
 	</p>
 	<p>
-		<span class="info"><?php print ($l->t ('If no authentication is required by your proxy, leave the following fields blank')); ?></span>
+		<span class="info"><?php p($l->t('If no authentication is required by your proxy, leave the following fields blank')); ?></span>
 	</p>
 	<p>
-		<label for="OCDProxyUser"><?php print ($l->t ('Proxy User')); ?></label>
-		<input type="text" class="OCDProxyUser ToUse" id="OCDProxyUser" data-loader="OCDSLoaderProxySettings" value="<?php print (isset ($_['OCDS_ProxyUser']) ? $_['OCDS_ProxyUser'] : ''); ?>" placeholder="<?php print ($l->t ('Username')); ?>" />
-		<input type="text" class="OCDProxyUserFake" id="OCDProxyUserFake" />
-		<input type="password" class="OCDProxyPasswdFake" id="OCDProxyPasswdFake" />
-		<label for="OCDProxyPasswd"><?php print ($l->t ('Proxy Password')); ?></label>
-		<input type="password" class="OCDProxyPasswd ToUse" id="OCDProxyPasswd" data-loader="OCDSLoaderProxySettings" placeholder="<?php print ($l->t ('Password')); ?>" />
+		<label for="OCDProxyUser"><?php p($l->t('Proxy User')); ?></label>
+		<input type="text" class="OCDProxyUser ToUse" id="OCDProxyUser" data-loader="OCDSLoaderProxySettings" value="<?php p($_['OCDS_ProxyUser'] ?? ''); ?>" placeholder="<?php p($l->t('Username')); ?>" autocomplete="off" />
+		<label for="OCDProxyPasswd"><?php p($l->t('Proxy Password')); ?></label>
+		<input type="password" class="OCDProxyPasswd ToUse" id="OCDProxyPasswd" data-loader="OCDSLoaderProxySettings" placeholder="<?php p($l->t('Password')); ?>" autocomplete="new-password" />
 	</p>
 	<p>
-		<label for="OCDProxyOnlyWithYTDL"><?php print ($l->t ('Only use proxy settings with YouTube-DL?')); ?></label>
+		<label for="OCDProxyOnlyWithYTDL"><?php p($l->t('Only use proxy settings with yt-dlp')); ?></label>
 		<select id="OCDProxyOnlyWithYTDL" class="ToUse" data-loader="OCDSLoaderProxySettings">
-			<option value="N"><?php print ($l->t ('No')); ?></option>
-			<option value="Y"<?php print ((isset ($_['OCDS_ProxyOnlyWithYTDL']) && strcmp ($_['OCDS_ProxyOnlyWithYTDL'], 'Y') == 0) ? ' selected="selected"' : ''); ?>><?php print ($l->t ('Yes')); ?></option>
+			<option value="N"><?php p($l->t('No')); ?></option>
+			<option value="Y"<?php if (($_['OCDS_ProxyOnlyWithYTDL'] ?? 'N') === 'Y'): ?> selected="selected"<?php endif; ?>><?php p($l->t('Yes')); ?></option>
 		</select>
 	</p>
 	<hr />
-	<div style="clear:both;"></div>
+	<div class="ocd-clear"></div>
 	<p>
-		<span class="info"><?php print ($l->t ('General settings')); ?></span>
-		<span id="OCDSLoaderGeneralSettings" class="OCDSLoader icon-loading-small"></span><span id="OCDSLoaderGeneralSettingsMsg" class="msg"></span>
+		<span class="info"><?php p($l->t('General settings')); ?></span>
+		<span id="OCDSLoaderGeneralSettings" class="OCDSLoader icon-loading-small"></span>
+		<span id="OCDSLoaderGeneralSettingsMsg" class="msg"></span>
 	</p>
 	<p>
-		<span class="info"><?php print ($l->t ('WARNING !! Switching from ARIA2 to another downloader engine will remove all current downloads from ARIA2')); ?></span>
+		<span class="info"><?php p($l->t('Switching from ARIA2 to cURL clears active ARIA2 queue entries')); ?></span>
 	</p>
 	<p>
-		<label for="OCDWhichDownloader"><?php print ($l->t ('Which downloader do you want to use?')); ?></label>
+		<label for="OCDWhichDownloader"><?php p($l->t('Download engine')); ?></label>
 		<select id="OCDWhichDownloader" class="ToUse" data-loader="OCDSLoaderGeneralSettings">
-			<option value="ARIA2" data-protocols="HTTP(S) / Magnet / FTP(S) / YouTube / BitTorrent">ARIA2</option>
-			<option value="CURL" data-protocols="HTTP(S) / FTP(S) / YouTube"<?php print ((isset ($_['OCDS_WhichDownloader']) && strcmp ($_['OCDS_WhichDownloader'], 'CURL') == 0) ? ' selected="selected"' : ''); ?>>cURL</option>
+			<option value="ARIA2" data-protocols="HTTP(S) / Magnet / FTP(S) / yt-dlp / BitTorrent"<?php if ($isAria2): ?> selected="selected"<?php endif; ?>>ARIA2</option>
+			<option value="CURL" data-protocols="HTTP(S) / FTP(S) / yt-dlp"<?php if (!$isAria2): ?> selected="selected"<?php endif; ?>>cURL</option>
 		</select>
-		<span id="OCDWhichDownloaderDetails" class="details"><?php print ($l->t ('Available protocols') . ': '); ?><strong></strong></span>
+		<span id="OCDWhichDownloaderDetails" class="details"><?php p($l->t('Available protocols')); ?>: <strong></strong></span>
 	</p>
-	<div id="OCDBTSettings"<?php print ((isset ($_['OCDS_WhichDownloader']) && strcmp ($_['OCDS_WhichDownloader'], 'ARIA2') == 0) ? '' : ' style="display:none"'); ?>>
-	<p>
-		<label for="OCDAriaAddress"><?php print ($l->t ('ARIA2 Address')); ?></label>
-		<input type="text" class="OCDAriaAddress ToUse" id="OCDAriaAddress" data-loader="OCDSLoaderGeneralSettings" value="<?php print (isset ($_['OCDS_AriaAddress']) ? $_['OCDS_AriaAddress'] : ''); ?>" placeholder="http://127.0.0.1" />
-		<label for="OCDAriaPort"><?php print ($l->t ('ARIA2 Port')); ?></label>
-		<input type="text" class="OCDAriaPort ToUse" id="OCDAriaPort" data-loader="OCDSLoaderGeneralSettings" value="<?php print (isset ($_['OCDS_AriaPort']) ? $_['OCDS_AriaPort'] : ''); ?>" placeholder="6800" />
-	</p>
-	<p>
-		<label for="OCDAriaToken"><?php print ($l->t ('ARIA2 Secret Token')); ?></label>
-		<input type="password" class="OCDAriaToken ToUse" id="OCDAriaToken" data-loader="OCDSLoaderGeneralSettings" placeholder="<?php print ($l->t ('Secret Token')); ?>" />
-	</p>
-	</div>
-	<p>
-		<label for="OCDMaxDownloadSpeed"><?php print ($l->t ('Max download speed ?')); ?></label>
-		<input type="text" id="OCDMaxDownloadSpeed" data-loader="OCDSLoaderGeneralSettings" class="ToUse" value="<?php print (isset ($_['OCDS_MaxDownloadSpeed']) ? $_['OCDS_MaxDownloadSpeed'] : ''); ?>" placeholder="10000" />
-		<span class="details"><?php print ($l->t ('KB/s (empty or 0 : unlimited, default : unlimited)')); ?></span>
-	</p>
-	<div id="OCDBTSettings"<?php print ((isset ($_['OCDS_AllowProtocolBT']) && isset ($_['OCDS_WhichDownloader']) && strcmp ($_['OCDS_AllowProtocolBT'], 'Y') == 0 && strcmp ($_['OCDS_WhichDownloader'], 'ARIA2') == 0) ? '' : ' style="display:none"'); ?>>
-		<hr />
-		<div style="clear:both;"></div>
+	<div id="OCDAriaSettings"<?php if (!$isAria2): ?> class="ocd-hidden"<?php endif; ?>>
 		<p>
-			<span class="info"><?php print ($l->t ('BitTorrent protocol settings - Max upload speed')); ?></span>
-			<span id="OCDSLoaderBTGeneralSettings" class="OCDSLoader icon-loading-small"></span><span id="OCDSLoaderBTGeneralSettingsMsg" class="msg"></span>
+			<label for="OCDAriaAddress"><?php p($l->t('ARIA2 RPC Address')); ?></label>
+			<input type="text" class="OCDAriaAddress ToUse" id="OCDAriaAddress" data-loader="OCDSLoaderGeneralSettings" value="<?php p($_['OCDS_AriaAddress'] ?? '127.0.0.1'); ?>" placeholder="127.0.0.1" />
+			<label for="OCDAriaPort"><?php p($l->t('ARIA2 RPC Port')); ?></label>
+			<input type="text" class="OCDAriaPort ToUse" id="OCDAriaPort" data-loader="OCDSLoaderGeneralSettings" value="<?php p($_['OCDS_AriaPort'] ?? '6800'); ?>" placeholder="6800" />
 		</p>
 		<p>
-			<label for="OCDBTMaxUploadSpeed"><?php print ($l->t ('BitTorrent protocol max upload speed?')); ?></label>
-			<input type="text" id="OCDBTMaxUploadSpeed" data-loader="OCDSLoaderBTGeneralSettings" class="ToUse" value="<?php print (isset ($_['OCDS_BTMaxUploadSpeed']) ? $_['OCDS_BTMaxUploadSpeed'] : ''); ?>" placeholder="5000" />
-			<span class="details"><?php print ($l->t ('KB/s (empty or 0 : unlimited, default : unlimited)')); ?></span>
+			<label for="OCDAriaToken"><?php p($l->t('ARIA2 Secret Token')); ?></label>
+			<input type="password" class="OCDAriaToken ToUse" id="OCDAriaToken" data-loader="OCDSLoaderGeneralSettings" placeholder="<?php p($l->t('Secret Token')); ?>" autocomplete="new-password" />
+		</p>
+	</div>
+	<p>
+		<label for="OCDMaxDownloadSpeed"><?php p($l->t('Max download speed')); ?></label>
+		<input type="text" id="OCDMaxDownloadSpeed" data-loader="OCDSLoaderGeneralSettings" class="ToUse" value="<?php p($_['OCDS_MaxDownloadSpeed'] ?? ''); ?>" placeholder="10000" />
+		<span class="details"><?php p($l->t('KB/s (0 or empty for unlimited)')); ?></span>
+	</p>
+	<div id="OCDBTSettings"<?php if (!($isAria2 && $allowBT)): ?> class="ocd-hidden"<?php endif; ?>>
+		<hr />
+		<div class="ocd-clear"></div>
+		<p>
+			<span class="info"><?php p($l->t('BitTorrent protocol settings - Max upload speed')); ?></span>
+			<span id="OCDSLoaderBTGeneralSettings" class="OCDSLoader icon-loading-small"></span>
+			<span id="OCDSLoaderBTGeneralSettingsMsg" class="msg"></span>
+		</p>
+		<p>
+			<label for="OCDBTMaxUploadSpeed"><?php p($l->t('BitTorrent max upload speed')); ?></label>
+			<input type="text" id="OCDBTMaxUploadSpeed" data-loader="OCDSLoaderBTGeneralSettings" class="ToUse" value="<?php p($_['OCDS_BTMaxUploadSpeed'] ?? ''); ?>" placeholder="5000" />
+			<span class="details"><?php p($l->t('KB/s (0 or empty for unlimited)')); ?></span>
 		</p>
 	</div>
 	<hr />
-	<div style="clear:both;"></div>
+	<div class="ocd-clear"></div>
 	<p>
-		<span class="info"><?php print ($l->t ('Allow protocols for users (except for members of the admin group)')); ?></span>
-		<span id="OCDSLoaderPermissionsSettings" class="OCDSLoader icon-loading-small"></span><span id="OCDSLoaderPermissionsSettingsMsg" class="msg"></span>
+		<span class="info"><?php p($l->t('Allowed protocols for standard users (administrators can use all protocols)')); ?></span>
+		<span id="OCDSLoaderPermissionsSettings" class="OCDSLoader icon-loading-small"></span>
+		<span id="OCDSLoaderPermissionsSettingsMsg" class="msg"></span>
 	</p>
 	<p>
-		<label for="OCDAllowProtocolHTTP"><?php print ($l->t ('Allow HTTP/Magnet?')); ?></label>
+		<label for="OCDAllowProtocolHTTP"><?php p($l->t('Allow HTTP/Magnet')); ?></label>
 		<select id="OCDAllowProtocolHTTP" class="ToUse" data-loader="OCDSLoaderPermissionsSettings">
-			<option value="Y"><?php print ($l->t ('Yes')); ?></option>
-			<option value="N"<?php print ((isset ($_['OCDS_AllowProtocolHTTP']) && strcmp ($_['OCDS_AllowProtocolHTTP'], 'N') == 0) ? ' selected="selected"' : ''); ?>><?php print ($l->t ('No')); ?></option>
+			<option value="Y"><?php p($l->t('Yes')); ?></option>
+			<option value="N"<?php if (($_['OCDS_AllowProtocolHTTP'] ?? 'Y') === 'N'): ?> selected="selected"<?php endif; ?>><?php p($l->t('No')); ?></option>
 		</select>
 	</p>
 	<p>
-		<label for="OCDAllowProtocolFTP"><?php print ($l->t ('Allow FTP?')); ?></label>
+		<label for="OCDAllowProtocolFTP"><?php p($l->t('Allow FTP')); ?></label>
 		<select id="OCDAllowProtocolFTP" class="ToUse" data-loader="OCDSLoaderPermissionsSettings">
-			<option value="Y"><?php print ($l->t ('Yes')); ?></option>
-			<option value="N"<?php print ((isset ($_['OCDS_AllowProtocolFTP']) && strcmp ($_['OCDS_AllowProtocolFTP'], 'N') == 0) ? ' selected="selected"' : ''); ?>><?php print ($l->t ('No')); ?></option>
+			<option value="Y"><?php p($l->t('Yes')); ?></option>
+			<option value="N"<?php if (($_['OCDS_AllowProtocolFTP'] ?? 'Y') === 'N'): ?> selected="selected"<?php endif; ?>><?php p($l->t('No')); ?></option>
 		</select>
 	</p>
 	<p>
-		<label for="OCDAllowProtocolYT"><?php print ($l->t ('Allow YouTube?')); ?></label>
+		<label for="OCDAllowProtocolYT"><?php p($l->t('Allow Video (yt-dlp)')); ?></label>
 		<select id="OCDAllowProtocolYT" class="ToUse" data-loader="OCDSLoaderPermissionsSettings">
-			<option value="Y"><?php print ($l->t ('Yes')); ?></option>
-			<option value="N"<?php print ((isset ($_['OCDS_AllowProtocolYT']) && strcmp ($_['OCDS_AllowProtocolYT'], 'N') == 0) ? ' selected="selected"' : ''); ?>><?php print ($l->t ('No')); ?></option>
+			<option value="Y"><?php p($l->t('Yes')); ?></option>
+			<option value="N"<?php if (($_['OCDS_AllowProtocolYT'] ?? 'Y') === 'N'): ?> selected="selected"<?php endif; ?>><?php p($l->t('No')); ?></option>
 		</select>
 	</p>
 	<p>
-		<label for="OCDAllowProtocolBT"><?php print ($l->t ('Allow BitTorrent?')); ?></label>
-		<select id="OCDAllowProtocolBT" class="ToUse" data-loader="OCDSLoaderPermissionsSettings"<?php print (isset ($_['OCDS_WhichDownloader']) && strcmp ($_['OCDS_WhichDownloader'], 'CURL') == 0 ? ' style="display:none"' : ''); ?>>
-			<option value="Y"><?php print ($l->t ('Yes')); ?></option>
-			<option value="N"<?php print ((isset ($_['OCDS_AllowProtocolBT']) && strcmp ($_['OCDS_AllowProtocolBT'], 'N') == 0) ? ' selected="selected"' : ''); ?>><?php print ($l->t ('No')); ?></option>
+		<label for="OCDAllowProtocolBT"><?php p($l->t('Allow BitTorrent')); ?></label>
+		<select id="OCDAllowProtocolBT" class="ToUse<?php if (!$isAria2): ?> ocd-hidden<?php endif; ?>" data-loader="OCDSLoaderPermissionsSettings">
+			<option value="Y"><?php p($l->t('Yes')); ?></option>
+			<option value="N"<?php if (!$allowBT): ?> selected="selected"<?php endif; ?>><?php p($l->t('No')); ?></option>
 		</select>
-		<span id="OCDAllowProtocolBTDetails" class="details"<?php print (isset ($_['OCDS_WhichDownloader']) && strcmp ($_['OCDS_WhichDownloader'], 'ARIA2') == 0 ? ' style="display:none"' : ''); ?>><strong><?php print ($l->t ('No')); ?></strong></span>
+		<span id="OCDAllowProtocolBTDetails" class="details<?php if ($isAria2): ?> ocd-hidden<?php endif; ?>"><strong><?php p($l->t('No')); ?></strong></span>
 	</p>
 </form>

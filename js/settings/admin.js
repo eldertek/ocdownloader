@@ -1,86 +1,154 @@
 /**
- * ownCloud - ocDownloader
- *
- * This file is licensed under the Affero General Public License version 3 or
- * later. See the LICENSE file.
- *
- * @author Xavier Beurois <www.sgc-univ.net>
- * @copyright Xavier Beurois 2015
+ * ocDownloader Admin Settings controller - pure vanilla ES6 (Nextcloud 28-35).
  */
+(function () {
+	'use strict';
 
-window.addEventListener('DOMContentLoaded', function () {
-	$('#OCDWhichDownloader').bind ('change', function ()
-	{
-		if ($('#OCDWhichDownloader').val () == 'ARIA2')
-		{
-			$('#OCDBTSettings').show ();
-			$('#OCDAllowProtocolBT').show ();
-			$('#OCDAllowProtocolBTDetails').hide ();
+	function getRequestToken() {
+		if (document.head && document.head.dataset && document.head.dataset.requesttoken) {
+			return document.head.dataset.requesttoken;
 		}
-		else
-		{
-			$('#OCDBTSettings').hide ();
-			if ($('#OCDAllowProtocolBT').val () != 'N')
-			{
-				$('#OCDAllowProtocolBT').val ('N');
-				$('#OCDAllowProtocolBT').change ();
-			}
-			$('#OCDAllowProtocolBT').hide ();
-			$('#OCDAllowProtocolBTDetails').show ();
+		if (window.OC && window.OC.requestToken) {
+			return window.OC.requestToken;
 		}
-	});
-	$('#OCDAllowProtocolBT').bind ('change', function ()
-	{
-		if ($('#OCDAllowProtocolBT').val () == 'Y')
-		{
-			$('#OCDBTSettings').show ();
+		return '';
+	}
+
+	function generateUrl(path) {
+		if (window.OC && typeof window.OC.generateUrl === 'function') {
+			return window.OC.generateUrl(path);
 		}
-		else
-		{
-			$('#OCDBTSettings').hide ();
-		}
-	});
-
-	$('form#ocdownloader input.ToUse, form#ocdownloader select.ToUse').bind ('change', function ()
-	{
-		var Field = $(this);
-
-		$('#' + Field.attr ('data-loader')).show ();
-		$('#' + Field.attr ('data-loader') + 'Msg').hide ();
-		$('#' + Field.attr ('data-loader') + 'Msg').removeClass ('error');
-		$('#' + Field.attr ('data-loader') + 'Msg').removeClass ('success');
-
-		$.ajax({
-	        url: OC.generateUrl ('/apps/ocdownloader/adminsettings/save'),
-	        method: 'POST',
-			dataType: 'json',
-			data: {
-				'KEY': Field.attr ('id').replace ('OCD', ''),
-				'VAL': Field.val ()
-			},
-	        async: true,
-	        cache: false,
-	        timeout: 30000,
-	        success: function (Data)
-			{
-				$('#' + Field.attr ('data-loader')).hide ();
-
-				$('#' + Field.attr ('data-loader') + 'Msg').text (Data.MESSAGE);
-				if (Data.ERROR)
-				{
-					$('#' + Field.attr ('data-loader') + 'Msg').addClass ('error');
+		var scripts = document.querySelectorAll('script[src*="/apps/ocdownloader/"]');
+		var root = '';
+		if (scripts.length > 0) {
+			var src = scripts[0].getAttribute('src') || '';
+			var idx = src.indexOf('/apps/ocdownloader/');
+			if (idx >= 0) {
+				try {
+					root = new URL(src.slice(0, idx), window.location.origin).pathname.replace(/\/$/, '');
+				} catch (e) {
+					root = src.slice(0, idx).replace(/\/$/, '');
 				}
-				else
-				{
-					$('#' + Field.attr ('data-loader') + 'Msg').addClass ('success');
+			}
+		}
+		var needsIndex = window.location.pathname.indexOf('/index.php/') !== -1;
+		return root + (needsIndex ? '/index.php' : '') + path;
+	}
+
+	function updateProtocolDetails() {
+		var wdSelect = document.getElementById('OCDWhichDownloader');
+		var detailsStrong = document.querySelector('#OCDWhichDownloaderDetails > strong');
+		if (!wdSelect || !detailsStrong) {
+			return;
+		}
+		var selected = wdSelect.options[wdSelect.selectedIndex];
+		detailsStrong.textContent = selected ? (selected.getAttribute('data-protocols') || '') : '';
+	}
+
+	function initAdminSettings() {
+		var form = document.getElementById('ocdownloader');
+		if (!form) {
+			return;
+		}
+
+		var wdSelect = document.getElementById('OCDWhichDownloader');
+		var ariaBox = document.getElementById('OCDAriaSettings');
+		var btBox = document.getElementById('OCDBTSettings');
+		var allowBtSelect = document.getElementById('OCDAllowProtocolBT');
+		var allowBtDetails = document.getElementById('OCDAllowProtocolBTDetails');
+
+		function syncVisibility() {
+			var isAria2 = wdSelect && wdSelect.value === 'ARIA2';
+			var isBtAllowed = allowBtSelect && allowBtSelect.value === 'Y';
+			if (ariaBox) {
+				ariaBox.classList.toggle('ocd-hidden', !isAria2);
+			}
+			if (btBox) {
+				btBox.classList.toggle('ocd-hidden', !(isAria2 && isBtAllowed));
+			}
+			if (allowBtSelect) {
+				allowBtSelect.classList.toggle('ocd-hidden', !isAria2);
+			}
+			if (allowBtDetails) {
+				allowBtDetails.classList.toggle('ocd-hidden', isAria2);
+			}
+			updateProtocolDetails();
+		}
+
+		if (wdSelect) {
+			wdSelect.addEventListener('change', function () {
+				if (wdSelect.value !== 'ARIA2' && allowBtSelect && allowBtSelect.value !== 'N') {
+					allowBtSelect.value = 'N';
+					allowBtSelect.dispatchEvent(new Event('change'));
+				}
+				syncVisibility();
+			});
+		}
+
+		if (allowBtSelect) {
+			allowBtSelect.addEventListener('change', syncVisibility);
+		}
+
+		form.querySelectorAll('input.ToUse, select.ToUse').forEach(function (field) {
+			field.addEventListener('change', function () {
+				var loaderId = field.getAttribute('data-loader') || '';
+				var loaderEl = loaderId ? document.getElementById(loaderId) : null;
+				var msgEl = loaderId ? document.getElementById(loaderId + 'Msg') : null;
+
+				if (loaderEl) {
+					loaderEl.style.display = 'inline-block';
+				}
+				if (msgEl) {
+					msgEl.style.display = 'none';
+					msgEl.classList.remove('error', 'success');
 				}
 
-				$('#' + Field.attr ('data-loader') + 'Msg').show ();
+				var key = (field.id || '').replace(/^OCD/, '');
+				fetch(generateUrl('/apps/ocdownloader/adminsettings/save'), {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: {
+						'Content-Type': 'application/json',
+						'Accept': 'application/json',
+						'requesttoken': getRequestToken()
+					},
+					body: JSON.stringify({
+						KEY: key,
+						VAL: field.value
+					})
+				})
+					.then(function (resp) {
+						return resp.json();
+					})
+					.then(function (data) {
+						if (msgEl) {
+							msgEl.textContent = (data && data.MESSAGE) || '';
+							msgEl.classList.add(data && data.ERROR ? 'error' : 'success');
+							msgEl.style.display = 'inline-block';
+						}
+						updateProtocolDetails();
+					})
+					.catch(function () {
+						if (msgEl) {
+							msgEl.textContent = 'Error saving setting';
+							msgEl.classList.add('error');
+							msgEl.style.display = 'inline-block';
+						}
+					})
+					.finally(function () {
+						if (loaderEl) {
+							loaderEl.style.display = 'none';
+						}
+					});
+			});
+		});
 
-				$('#OCDWhichDownloaderDetails > strong').text ($('#OCDWhichDownloader > option:selected').attr ('data-protocols'));
-			}
-	    });
-	});
+		syncVisibility();
+	}
 
-	$('#OCDWhichDownloaderDetails > strong').text ($('#OCDWhichDownloader > option:selected').attr ('data-protocols'));
-});
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initAdminSettings);
+	} else {
+		initAdminSettings();
+	}
+})();

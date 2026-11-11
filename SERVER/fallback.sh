@@ -1,3 +1,3 @@
-#!/bin/bash
-DIR=$( cd "$( dirname "$0" )" && pwd )
-$(which nohup) $(which php) $DIR/fallback.php "$1" "$2" "$3" > /tmp/nohup.out 2>&1 &
+#!/bin/sh
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+nohup php "$DIR/fallback.php" "$1" "$2" "$3" >/dev/null 2>&1 &

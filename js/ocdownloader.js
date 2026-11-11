@@ -1,826 +1,829 @@
 /**
- * ownCloud - OCDLR
- *
- * This file is licensed under the Affero General Public License version 3 or
- * later. See the LICENSE file.
- *
- * @author Xavier Beurois <www.sgc-univ.net>
- * @copyright Xavier Beurois 2015
+ * ocDownloader frontend core - pure vanilla ES6 (Nextcloud 28-35, zero jQuery dependency).
  */
+(function () {
+	'use strict';
 
-OCDLR = {};
+	window.OCDLR = window.OCDLR || {};
 
-(function ()
-{
-	OCDLR.Utils =
-	{
-		BaseURL: '/apps/ocdownloader/',
-		BaseID: '#app-content-wrapper ',
-		MenuID: '#app-navigation ',
-		Queue: '',
-		QueueHeader: '',
-		QueueElt: '',
-		DownloadsFolder: '',
-		TorrentsFolder: '',
-		WhichDownloader: '',
-		BadgerStatus: [],
+	function tr(text) {
+		if (typeof window.t === 'function') {
+			return window.t('ocdownloader', text);
+		}
+		return text;
+	}
 
-		ValidURL: function (URLString)
-		{
-			return /^([a-z]([a-z]|\d|\+|-|\.)*):(\/\/(((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?((\[(|(v[\da-f]{1,}\.(([a-z]|\d|-|\.|_|~)|[!\$&'\(\)\*\+,;=]|:)+))\])|((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=])*)(:\d*)?)(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*|(\/((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)|((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)|((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)){0})(\?((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(\#((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/i.test(URLString);
-		},
+	function getRequestToken() {
+		if (document.head && document.head.dataset && document.head.dataset.requesttoken) {
+			return document.head.dataset.requesttoken;
+		}
+		if (window.OC && window.OC.requestToken) {
+			return window.OC.requestToken;
+		}
+		return '';
+	}
 
-		PrintError: function (Msg)
-		{
-			$(OCDLRSelf.BaseID + 'span.muted').removeClass ('info alert');
-			$(OCDLRSelf.BaseID + 'span.muted').addClass ('alert').text (Msg);
-		},
-
-		PrintInfo: function (Msg)
-		{
-			$(OCDLRSelf.BaseID + 'span.muted').removeClass ('info alert');
-			$(OCDLRSelf.BaseID + 'span.muted').addClass ('info').text (Msg);
-		},
-
-		UpdateQueue: function (DynMode, View)
-		{
-			var IntervalHandle = setInterval (function ()
-			{
-				clearInterval (IntervalHandle);
-
-				if ($(OCDLRSelf.QueueElt).length > 0)
-				{
-					$(OCDLRSelf.BaseID + '.loadingtext').show ();
-				    $.ajax ({
-				        url: OC.generateUrl (OCDLRSelf.BaseURL + 'queue/get'),
-				        method: 'POST',
-						data: {'VIEW' : View},
-						dataType: 'json',
-				        async: true,
-				        cache: false,
-				        timeout: 30000,
-				        success: function (Data)
-						{
-				            if (Data.ERROR)
-							{
-								OCDLRSelf.PrintError (Data.MESSAGE);
-							}
-							else
-							{
-								if ($(OCDLRSelf.QueueElt + '[data-rel="LOADER"]').length != 0)
-								{
-									$(OCDLRSelf.QueueElt + '[data-rel="LOADER"]').remove ();
-								}
-
-								$('#ball').Badger (Data.COUNTER.ALL);
-								$('#bcompletes').Badger (Data.COUNTER.COMPLETES);
-								$('#bactives').Badger (Data.COUNTER.ACTIVES);
-								$('#bwaitings').Badger (Data.COUNTER.WAITINGS);
-								$('#bstopped').Badger (Data.COUNTER.STOPPED);
-								$('#bremoved').Badger (Data.COUNTER.REMOVED);
-
-								var DBGIDS = [];
-								$.each (Data.QUEUE, function (Index, Value)
-								{
-									var QueueElt = OCDLRSelf.QueueElt + '[data-rel="' + Value.GID + '"]';
-									DBGIDS.push (Value.GID);
-
-									if (DynMode && $(QueueElt).length == 0)
-									{
-										OCDLRSelf.PrependToQueue (Value, View);
-									}
-
-									if ($(QueueElt + ' > td[data-rel="ACTION"] > div.icon-pause').length == 0 && Value.STATUSID == 1)
-									{
-										OCDLRSelf.ActionPause ($(QueueElt + ' > td[data-rel="ACTION"]'), View);
-									}
-									if ($(QueueElt + ' > td[data-rel="ACTION"] > div.icon-play').length == 0 && Value.STATUSID == 3)
-									{
-										OCDLRSelf.ActionUnPause ($(QueueElt + ' > td[data-rel="ACTION"]'), View);
-									}
-
-									if (Value.PROGRESSVAL == '100%')
-									{
-										$(QueueElt + ' > td[data-rel="FILENAME"]').html ('<a title="'+Value.FILENAME+'" href="' + OC.linkTo ('files', 'index.php') + '?dir=' + encodeURIComponent (OCDLRSelf.DownloadsFolder).replace(/%2F/g, '/') + '">' + Value.FILENAME_SHORT + '</a>');
-
-										if (Value.ISTORRENT && Value.SPEED != '--')
-										{
-											$(QueueElt + ' > td[data-rel="SPEED"]').html ('<div class="icon-upload svg"></div>' + Value.SPEED);
-										}
-										else
-										{
-											$(QueueElt + ' > td[data-rel="SPEED"]').html (Value.SPEED);
-
-											if (!Value.ISTORRENT)
-											{
-												$(QueueElt + ' > td[data-rel="ACTION"] > div.icon-pause').remove ();
-												$(QueueElt + ' > td[data-rel="ACTION"] > div.icon-play').remove ();
-											}
-										}
-									}
-									else
-									{
-										if (Value.SPEED != '--')
-										{
-											$(QueueElt + ' > td[data-rel="SPEED"]').html ('<div class="icon-download svg"></div>' + Value.SPEED);
-										}
-										else
-										{
-											$(QueueElt + ' > td[data-rel="SPEED"]').html (Value.SPEED);
-										}
-									}
-
-									$(QueueElt + ' > td[data-rel="MESSAGE"] > div.pb-wrap > div.pb-value > div.pb-text').html (Value.PROGRESS);
-									$(QueueElt + ' > td[data-rel="MESSAGE"] > div.pb-wrap > div.pb-value').css ('width', Value.PROGRESSVAL);
-									$(QueueElt + ' > td[data-rel="STATUS"]').text (Value.STATUS);
-								});
-
-								OCDLRSelf.RemoveQueueItems (DBGIDS);
-							}
-
-							$(OCDLRSelf.BaseID + '.loadingtext').hide ();
-				        }
-				    });
+	function detectWebRoot() {
+		if (window.OC && typeof window.OC.webroot === 'string') {
+			return window.OC.webroot;
+		}
+		var scripts = document.querySelectorAll('script[src*="/apps/ocdownloader/"]');
+		if (scripts.length > 0) {
+			var src = scripts[0].getAttribute('src') || '';
+			var idx = src.indexOf('/apps/ocdownloader/');
+			if (idx >= 0) {
+				var prefix = src.slice(0, idx);
+				try {
+					return new URL(prefix, window.location.origin).pathname.replace(/\/$/, '');
+				} catch (e) {
+					return prefix.replace(/\/$/, '');
 				}
-				OCDLRSelf.UpdateQueue ((View == 'add' ? false : true), View);
+			}
+		}
+		return '';
+	}
+
+	function generateUrl(path) {
+		if (window.OC && typeof window.OC.generateUrl === 'function') {
+			return window.OC.generateUrl(path);
+		}
+		var root = detectWebRoot();
+		var needsIndex = window.location.pathname.indexOf('/index.php/') !== -1;
+		return root + (needsIndex ? '/index.php' : '') + (path.charAt(0) === '/' ? path : ('/' + path));
+	}
+
+	function filesFolderUrl(folderPath) {
+		var clean = '/' + String(folderPath || 'Downloads').replace(/^\/+/, '');
+		return generateUrl('/apps/files/?dir=' + encodeURIComponent(clean).replace(/%2F/g, '/'));
+	}
+
+	function apiRequest(endpoint, method, payload) {
+		var opts = {
+			method: method || 'POST',
+			credentials: 'same-origin',
+			headers: {
+				'requesttoken': getRequestToken(),
+				'Accept': 'application/json'
+			}
+		};
+		if (method !== 'GET' && payload !== undefined) {
+			if (payload instanceof FormData) {
+				opts.body = payload;
+			} else {
+				opts.headers['Content-Type'] = 'application/json';
+				opts.body = JSON.stringify(payload);
+			}
+		}
+		return fetch(generateUrl(endpoint), opts).then(function (resp) {
+			return resp.json();
+		});
+	}
+
+	function cssEscapeAttr(val) {
+		return String(val).replace(/["\\]/g, '\\$&');
+	}
+
+	var Utils = {
+		BaseURL: '/apps/ocdownloader/',
+		DownloadsFolder: 'Downloads',
+		TorrentsFolder: 'Downloads/Files/Torrents',
+		WhichDownloader: 'ARIA2',
+		BadgerStatus: ['completes', 'actives', 'waitings', 'stopped'],
+		pollTimer: null,
+
+		tr: tr,
+		generateUrl: generateUrl,
+		filesFolderUrl: filesFolderUrl,
+		apiRequest: apiRequest,
+
+		initBadgesLoading: function () {
+			['#ball', '#bcompletes', '#bactives', '#bwaitings', '#bstopped', '#bremoved'].forEach(function (sel) {
+				window.OCDLR.setBadge(sel, '...');
+			});
+		},
+
+		applyCounters: function (counters) {
+			if (!counters) {
+				return;
+			}
+			window.OCDLR.setBadge('#ball', counters.ALL);
+			window.OCDLR.setBadge('#bcompletes', counters.COMPLETES);
+			window.OCDLR.setBadge('#bactives', counters.ACTIVES);
+			window.OCDLR.setBadge('#bwaitings', counters.WAITINGS);
+			window.OCDLR.setBadge('#bstopped', counters.STOPPED);
+			window.OCDLR.setBadge('#bremoved', counters.REMOVED);
+		},
+
+		ValidURL: function (urlString) {
+			if (!urlString || typeof urlString !== 'string') {
+				return false;
+			}
+			var trimmed = urlString.trim();
+			if (/^magnet:\?xt=urn:[a-z0-9]+:[a-z0-9]{32,64}/i.test(trimmed)) {
+				return true;
+			}
+			try {
+				var parsed = new URL(trimmed);
+				return ['http:', 'https:', 'ftp:', 'ftps:'].indexOf(parsed.protocol.toLowerCase()) !== -1 && Boolean(parsed.hostname);
+			} catch (e) {
+				return false;
+			}
+		},
+
+		PrintError: function (msg) {
+			document.querySelectorAll('#app-content-wrapper span.muted').forEach(function (el) {
+				el.classList.remove('info', 'alert');
+				el.classList.add('alert');
+				el.textContent = msg || '';
+			});
+		},
+
+		PrintInfo: function (msg) {
+			document.querySelectorAll('#app-content-wrapper span.muted').forEach(function (el) {
+				el.classList.remove('info', 'alert');
+				el.classList.add('info');
+				el.textContent = msg || '';
+			});
+		},
+
+		showLoading: function (visible) {
+			var el = document.querySelector('#app-content-wrapper .loadingtext');
+			if (!el) {
+				return;
+			}
+			if (visible) {
+				el.classList.remove('ocd-hidden');
+			} else {
+				el.classList.add('ocd-hidden');
+			}
+		},
+
+		loadInitialSettings: function () {
+			return Promise.all([
+				apiRequest(Utils.BaseURL + 'personalsettings/get', 'GET').then(function (data) {
+					if (data && !data.ERROR && data.VALS) {
+						Object.keys(data.VALS).forEach(function (k) {
+							Utils[k] = data.VALS[k];
+						});
+					}
+				}).catch(function () {}),
+				apiRequest(Utils.BaseURL + 'adminsettings/get', 'POST', { KEYS: ['WhichDownloader'] }).then(function (data) {
+					if (data && !data.ERROR && data.VALS) {
+						Object.keys(data.VALS).forEach(function (k) {
+							Utils[k] = data.VALS[k];
+						});
+					}
+				}).catch(function () {})
+			]);
+		},
+
+		startView: function (view) {
+			Utils.initBadgesLoading();
+			Utils.loadInitialSettings().finally(function () {
+				Utils.GetCounters();
+				Utils.pollQueueOnce(true, view);
+			});
+		},
+
+		scheduleNextPoll: function (dynMode, view) {
+			if (Utils.pollTimer) {
+				clearTimeout(Utils.pollTimer);
+			}
+			Utils.pollTimer = setTimeout(function () {
+				Utils.pollQueueOnce(dynMode, view);
 			}, 3000);
 		},
 
-		RemoveQueueItem: function (Item)
-		{
-			if (Item.parent ().children ().length == 1)
-			{
-				$(OCDLRSelf.Queue + ' th[data-rel="ACTION"] > div').remove ();
+		pollQueueOnce: function (dynMode, view) {
+			var tbody = document.querySelector('#Queue tbody');
+			if (!tbody) {
+				return;
 			}
 
-			Item.remove ();
+			var rows = tbody.querySelectorAll('tr');
+			if (rows.length === 0 && !dynMode) {
+				Utils.scheduleNextPoll(view !== 'add', view);
+				return;
+			}
+
+			Utils.showLoading(true);
+			apiRequest(Utils.BaseURL + 'queue/get', 'POST', { VIEW: view })
+				.then(function (data) {
+					if (data.ERROR) {
+						Utils.PrintError(data.MESSAGE);
+						return;
+					}
+
+					var loaderRow = tbody.querySelector('tr[data-rel="LOADER"]');
+					if (loaderRow) {
+						loaderRow.remove();
+					}
+
+					Utils.applyCounters(data.COUNTER);
+
+					var seenGids = [];
+					(data.QUEUE || []).forEach(function (item) {
+						seenGids.push(item.GID);
+						var row = tbody.querySelector('tr[data-rel="' + cssEscapeAttr(item.GID) + '"]');
+						if (!row && (dynMode || view === 'add')) {
+							row = Utils.PrependToQueue(item, view);
+						}
+						if (row) {
+							Utils.updateRowElement(row, item, view);
+						}
+					});
+
+					Utils.RemoveQueueItems(seenGids);
+				})
+				.catch(function () {})
+				.finally(function () {
+					Utils.showLoading(false);
+					Utils.scheduleNextPoll(view !== 'add', view);
+				});
 		},
 
-		RemoveQueueItems: function (Items)
-		{
-			$(OCDLRSelf.QueueElt).each (function ()
-			{
-				if (Items.indexOf ($(this).attr ('data-rel')) == -1)
-				{
-					$(this).remove ();
+		updateRowElement: function (row, item, view) {
+			var actionTd = row.querySelector('td[data-rel="ACTION"]');
+			if (actionTd) {
+				if (item.STATUSID === 1 && !actionTd.querySelector('.icon-pause')) {
+					var existingPlay = actionTd.querySelector('.icon-play');
+					if (existingPlay) {
+						existingPlay.remove();
+					}
+					Utils.ActionPause(actionTd, view);
 				}
-			});
-			if ($(OCDLRSelf.QueueElt).length == 0)
-			{
-				$(OCDLRSelf.Queue + '> thead th[data-rel="ACTION"] > div').remove ();
+				if (item.STATUSID === 3 && !actionTd.querySelector('.icon-play')) {
+					var existingPause = actionTd.querySelector('.icon-pause');
+					if (existingPause) {
+						existingPause.remove();
+					}
+					Utils.ActionPlay(actionTd, view);
+				}
 			}
-		},
 
-		HideFromQueue: function (Button)
-		{
-			Button.addClass ('icon-loading-small');
-			Button.removeClass ('icon-close');
+			var filenameTd = row.querySelector('td[data-rel="FILENAME"]');
+			var speedTd = row.querySelector('td[data-rel="SPEED"]');
 
-			var TR = Button.parent ().parent ();
-			var GID = TR.attr ('data-rel');
-			if (GID)
-			{
-				$.ajax ({
-			        url: OC.generateUrl (OCDLRSelf.BaseURL + 'queue/hide'),
-			        method: 'POST',
-					dataType: 'json',
-					data: {'GID' : GID},
-			        async: true,
-			        cache: false,
-			        timeout: 30000,
-			        success: function (Data)
-					{
-			            if (Data.ERROR)
-						{
-							OCDLRSelf.PrintError (Data.MESSAGE);
-							Button.addClass ('icon-close');
-							Button.removeClass ('icon-loading-small');
-						}
-						else
-						{
-							OCDLRSelf.PrintInfo (Data.MESSAGE + ' (' + GID + ')');
-							OCDLRSelf.RemoveQueueItem (TR);
-						}
-			        }
-			    });
-			}
-			else
-			{
-				OCDLRSelf.PrintError (t ('ocdownloader', 'Unable to find the GID for this download…'));
-			}
-		},
-
-		HideAllFromQueue: function (Button)
-		{
-			Button.addClass ('icon-loading-small');
-			Button.removeClass ('icon-close');
-
-			var GIDS = [];
-			$(OCDLRSelf.QueueElt + ' td[data-rel="ACTION"] > div.icon-close').each (function ()
-			{
-				$(this).addClass ('icon-loading-small');
-				$(this).removeClass ('icon-close');
-
-				GIDS.push ($(this).parent ().parent ().attr ('data-rel'));
-			});
-
-			if (GIDS.length > 0)
-			{
-				$.ajax ({
-			        url: OC.generateUrl (OCDLRSelf.BaseURL + 'queue/hideall'),
-			        method: 'POST',
-					dataType: 'json',
-					data: {'GIDS' : GIDS},
-			        async: true,
-			        cache: false,
-			        timeout: 30000,
-			        success: function (Data)
-					{
-						if (Data.ERROR)
-						{
-							OCDLRSelf.PrintError (Data.MESSAGE);
-						}
-						else
-						{
-							OCDLRSelf.PrintInfo (Data.MESSAGE);
-							$.each (Data.QUEUE, function (Index, Value)
-							{
-								$(OCDLRSelf.QueueElt + '[data-rel="' + Value.GID + '"]').remove ();
-							});
-							$(OCDLRSelf.Queue + ' th[data-rel="ACTION"] > div.icon-loading-small').remove ();
-						}
-			        }
-			    });
-			}
-			else
-			{
-				OCDLRSelf.PrintError (t ('ocdownloader', 'No downloads in the queue…'));
-			}
-		},
-
-		PauseDownload: function (Button, View)
-		{
-			Button.addClass ('icon-loading-small');
-			Button.removeClass ('icon-pause');
-
-			$('#bactives').Badger ('-1');
-			$('#bstopped').Badger ('+1');
-
-			var TR = Button.parent ().parent ();
-			var GID = TR.attr ('data-rel');
-			if (GID)
-			{
-				$.ajax ({
-			        url: OC.generateUrl (OCDLRSelf.BaseURL + 'queue/pause'),
-			        method: 'POST',
-					dataType: 'json',
-					data: {'GID' : GID},
-			        async: true,
-			        cache: false,
-			        timeout: 30000,
-			        success: function (Data)
-					{
-			            if (Data.ERROR)
-						{
-							OCDLRSelf.PrintError (Data.MESSAGE);
-							Button.addClass ('icon-pause');
-						}
-						else
-						{
-							OCDLRSelf.PrintInfo (Data.MESSAGE + ' (' + GID + ')');
-
-							if (['add', 'all'].indexOf (View) > -1)
-							{
-								Button.addClass ('icon-play');
-
-								Button.parent ().parent ().children ('td[data-rel="STATUS"]').attr ('data-statusid', 3);
-								Button.parent ().parent ().children ('td[data-rel="STATUS"]').text (t ('ocdownloader', 'Paused'));
-								Button.unbind ('click');
-								Button.bind ('click', function ()
-								{
-									OCDLRSelf.UnPauseDownload ($(this), View);
-								});
-							}
-							else
-							{
-								OCDLRSelf.RemoveQueueItem (TR);
-							}
-						}
-						Button.removeClass ('icon-loading-small');
-			        }
-			    });
-			}
-			else
-			{
-				OCDLRSelf.PrintError (t ('ocdownloader', 'Unable to find the GID for this download…'));
-			}
-		},
-
-		UnPauseDownload: function (Button, View)
-		{
-			Button.addClass ('icon-loading-small');
-			Button.removeClass ('icon-play');
-
-			$('#bactives').Badger ('+1');
-			$('#bstopped').Badger ('-1');
-
-			var TR = Button.parent ().parent ();
-			var GID = TR.attr ('data-rel');
-			if (GID)
-			{
-				$.ajax ({
-			        url: OC.generateUrl (OCDLRSelf.BaseURL + 'queue/unpause'),
-			        method: 'POST',
-					dataType: 'json',
-					data: {'GID' : GID},
-			        async: true,
-			        cache: false,
-			        timeout: 30000,
-			        success: function (Data)
-					{
-			            if (Data.ERROR)
-						{
-							OCDLRSelf.PrintError (Data.MESSAGE);
-							Button.addClass ('icon-play');
-						}
-						else
-						{
-							OCDLRSelf.PrintInfo (Data.MESSAGE + ' (' + GID + ')');
-
-							if (['add', 'all'].indexOf (View) > -1)
-							{
-								Button.addClass ('icon-pause');
-
-								Button.parent ().parent ().children ('td[data-rel="STATUS"]').attr ('data-statusid', 1);
-								Button.parent ().parent ().children ('td[data-rel="STATUS"]').text (t ('ocdownloader', 'Active'));
-								Button.unbind ('click');
-								Button.bind ('click', function ()
-								{
-									OCDLRSelf.PauseDownload ($(this), View);
-								});
-							}
-							else
-							{
-								OCDLRSelf.RemoveQueueItem (TR);
-							}
-						}
-						Button.removeClass ('icon-loading-small');
-			        }
-			    });
-			}
-			else
-			{
-				OCDLRSelf.PrintError (t ('ocdownloader', 'Unable to find the GID for this download…'));
-			}
-		},
-
-		RemoveFromQueue: function (Button, Completely, View)
-		{
-			Button.addClass ('icon-loading-small');
-			Button.removeClass ('icon-delete');
-
-			var TR = Button.parent ().parent ();
-			var GID = TR.attr ('data-rel');
-			if (GID)
-			{
-				$.ajax ({
-			        url: OC.generateUrl (OCDLRSelf.BaseURL + 'queue/' + Completely + 'remove'),
-			        method: 'POST',
-					dataType: 'json',
-					data: {'GID' : GID},
-			        async: true,
-			        cache: false,
-			        timeout: 30000,
-			        success: function (Data)
-					{
-			            if (Data.ERROR)
-						{
-							OCDLRSelf.PrintError (Data.MESSAGE);
-							Button.addClass ('icon-delete');
-							Button.removeClass ('icon-loading-small');
-						}
-						else
-						{
-							OCDLRSelf.PrintInfo (Data.MESSAGE + ' (' + GID + ')');
-							if (View != 'all' || Completely.length > 0)
-							{
-								OCDLRSelf.RemoveQueueItem (TR);
-							}
-							else if (TR.children ('td[data-rel="STATUS"]').attr ('data-statusid') == '3')
-							{
-								$('#bremoved').Badger ('-1');
-								$('#ball').Badger ('-1');
-								OCDLRSelf.RemoveFromQueue (Button, 'completely', View);
-							}
-							else
-							{
-								var TD = Button.parent ();
-								TD.children ('div').remove ();
-
-								TD.parent ().children ('td[data-rel="STATUS"]').text (t ('ocdownloader', 'Removed'));
-								OCDLRSelf.ActionDeleteCompletely (TD);
-							}
-						}
-			        }
-			    });
-			}
-			else
-			{
-				OCDLRSelf.PrintError (t ('ocdownloader', 'Unable to find the GID for this download…'))
-			}
-		},
-
-		RemoveAllFromQueue: function (Button, Completely, View)
-		{
-			Button.addClass ('icon-loading-small');
-			Button.removeClass ('icon-delete');
-
-			var GIDS = [];
-			$(OCDLRSelf.QueueElt + ' td[data-rel="ACTION"] > div.icon-delete').each (function ()
-			{
-				$(this).addClass ('icon-loading-small');
-				$(this).removeClass ('icon-delete');
-
-				GIDS.push ($(this).parent ().parent ().attr ('data-rel'));
-			});
-
-			if (GIDS.length > 0)
-			{
-				$.ajax ({
-			        url: OC.generateUrl (OCDLRSelf.BaseURL + 'queue/' + Completely + 'removeall'),
-			        method: 'POST',
-					dataType: 'json',
-					data: {'GIDS' : GIDS},
-			        async: true,
-			        cache: false,
-			        timeout: 30000,
-			        success: function (Data)
-					{
-						if (Data.ERROR)
-						{
-							OCDLRSelf.PrintError (Data.MESSAGE);
-						}
-						else
-						{
-							OCDLRSelf.PrintInfo (Data.MESSAGE);
-							OCDLRSelf.RemoveQueueItems (Data.GIDS);
-
-							if (Completely.length > 0)
-							{
-								$('#bremoved').Badger ('-' + GIDS.length);
-								$('#ball').Badger ('-' + GIDS.length);
-							}
-							else
-							{
-								$('#bremoved').Badger ('+' + GIDS.length);
-								$('#b' + View).Badger ('-' + GIDS.length);
-							}
-						}
-			        }
-			    });
-			}
-			else
-			{
-				OCDLRSelf.PrintError (t ('ocdownloader', 'Unable to find the GID for this download…'));
-			}
-		},
-
-		GetPersonalSettings: function ()
-		{
-			$.ajax ({
-		        url: OC.generateUrl (OCDLRSelf.BaseURL + 'personalsettings/get'),
-		        method: 'GET',
-				dataType: 'json',
-		        async: false,
-		        cache: false,
-		        timeout: 30000,
-		        success: function (Data)
-				{
-		            if (!Data.ERROR)
-					{
-						$.each (Data.VALS, function (Key, Value)
-						{
-                            OCDLRSelf[Key] = Value;
+			if (item.PROGRESSVAL === '100%' || item.STATUSID === 0) {
+				if (filenameTd) {
+					filenameTd.textContent = '';
+					var link = document.createElement('a');
+					link.title = item.FILENAME || '';
+					link.href = filesFolderUrl(Utils.DownloadsFolder);
+					link.textContent = item.FILENAME_SHORT || item.FILENAME || '';
+					filenameTd.appendChild(link);
+				}
+				if (speedTd) {
+					speedTd.textContent = '';
+					if (item.ISTORRENT && item.SPEED && item.SPEED !== '--') {
+						var upIcon = document.createElement('div');
+						upIcon.className = 'icon-upload svg';
+						speedTd.appendChild(upIcon);
+					} else if (!item.ISTORRENT && actionTd) {
+						actionTd.querySelectorAll('.icon-pause, .icon-play').forEach(function (b) {
+							b.remove();
 						});
 					}
-		        }
-		    });
-		},
-
-		GetAdminSettings: function (KEYS)
-		{
-			$.ajax ({
-		        url: OC.generateUrl (OCDLRSelf.BaseURL + 'adminsettings/get'),
-		        method: 'POST',
-				dataType: 'json',
-				data: {'KEYS' : KEYS},
-		        async: false,
-		        cache: false,
-		        timeout: 30000,
-		        success: function (Data)
-				{
-		            if (!Data.ERROR)
-					{
-						$.each (Data.VALS, function (Key, Value)
-						{
-                            OCDLRSelf[Key] = Value;
-						});
-					}
-		        }
-		    });
-		},
-
-		GetTorrentsList: function (LIST)
-		{
-			if (LIST.is (':visible'))
-			{
-				LIST.hide ();
+					speedTd.appendChild(document.createTextNode(item.SPEED || '--'));
+				}
+			} else if (speedTd) {
+				speedTd.textContent = '';
+				if (item.SPEED && item.SPEED !== '--' && item.SPEED !== tr('N/A')) {
+					var dlIcon = document.createElement('div');
+					dlIcon.className = 'icon-download svg';
+					speedTd.appendChild(dlIcon);
+				}
+				speedTd.appendChild(document.createTextNode(item.SPEED || '--'));
 			}
-			else
-			{
-				LIST.empty ();
-				LIST.append ('<li><p class="loader"><span class="icon-loading-small"></span></p></li>');
-				LIST.show ();
 
-				$.ajax ({
-			        url: OC.generateUrl (OCDLRSelf.BaseURL + 'btdownloader/listtorrentfiles'),
-			        method: 'POST',
-					dataType: 'json',
-			        async: true,
-			        cache: false,
-			        timeout: 30000,
-			        success: function (Data)
-					{
-			            if (Data.ERROR)
-						{
-							OCDLRSelf.PrintError (Data.MESSAGE);
-						}
-						else
-						{
-							LIST.empty ();
-
-							if (Data.FILES.length == 0)
-							{
-								LIST.append ('<li><p>' + t ('ocdownloader', 'No Torrent Files') + ', <a href="' + OC.linkTo ('files', 'index.php') + '?dir=' + encodeURIComponent (OCDLRSelf.TorrentsFolder).replace(/%2F/g, '/') + '">' + t ('ocdownloader', 'Upload') + '</a></p></li>');
-							}
-							else
-							{
-								for (var I = 0; I < Data.FILES.length; I++)
-								{
-									if (Data.FILES[I].name.match(/\.torrent$/))
-									{
-										LIST.append ('<li><p class="clickable">' + Data.FILES[I].name + '</p></li>');
-									}
-								}
-
-								// Select a torrent in the proposed list
-								LIST.children ('li').children ('p.clickable').bind ('click', function ()
-								{
-									LIST.parent ().children ('a').prop ('data-rel', 'File');
-									LIST.parent ().children ('a').html ($(this).text () + '<div class="icon-caret-dark svg"></div>');
-								});
-							}
-						}
-			        }
-			    });
+			var pbText = row.querySelector('td[data-rel="MESSAGE"] .pb-text');
+			if (pbText) {
+				pbText.innerHTML = item.PROGRESS || '';
+			}
+			var pbVal = row.querySelector('td[data-rel="MESSAGE"] .pb-value');
+			if (pbVal) {
+				pbVal.style.width = item.PROGRESSVAL || '0%';
+			}
+			var statusTd = row.querySelector('td[data-rel="STATUS"]');
+			if (statusTd) {
+				statusTd.setAttribute('data-statusid', String(item.STATUSID));
+				statusTd.textContent = item.STATUS || '';
 			}
 		},
 
-		GetCounters: function ()
-		{
-			$.ajax ({
-		        url: OC.generateUrl (OCDLRSelf.BaseURL + 'queue/count'),
-		        method: 'POST',
-				dataType: 'json',
-		        async: true,
-		        cache: false,
-		        timeout: 30000,
-		        success: function (Data)
-				{
-		            if (Data.ERROR)
-					{
-						OCDLRSelf.PrintError (Data.MESSAGE);
-					}
-					else
-					{
-						$('#ball').Badger (Data.COUNTER.ALL);
-						$('#bcompletes').Badger (Data.COUNTER.COMPLETES);
-						$('#bactives').Badger (Data.COUNTER.ACTIVES);
-						$('#bwaitings').Badger (Data.COUNTER.WAITINGS);
-						$('#bstopped').Badger (Data.COUNTER.STOPPED);
-						$('#bremoved').Badger (Data.COUNTER.REMOVED);
-					}
-		        }
-		    });
-		},
+		PrependToQueue: function (data, view) {
+			var tbody = document.querySelector('#Queue tbody');
+			if (!tbody) {
+				return null;
+			}
+			var loaderRow = tbody.querySelector('tr[data-rel="LOADER"]');
+			if (loaderRow) {
+				loaderRow.remove();
+			}
 
-		PrependToQueue: function (Data, View)
-		{
-			$(OCDLRSelf.Queue + '> tbody').prepend ('<tr data-rel="' + Data.GID + '">' +
-				'<td data-rel="FILENAME" class="padding">' + Data.FILENAME_SHORT + '</td>' +
-				'<td data-rel="PROTO" class="border padding">' + t ('ocdownloader', Data.PROTO) + '</td>' +
-				'<td data-rel="MESSAGE" class="border"><div class="pb-wrap"><div class="pb-value" style="width: ' + Data.PROGRESSVAL + ';"><div class="pb-text">' + Data.PROGRESS + '</div></div></div></td>' +
-				(['add', 'actives', 'all'].indexOf (View) > -1 ? '<td data-rel="SPEED" class="border padding">' + Data.SPEED + '</td>' : '') +
-				(['add', 'all'].indexOf (View) > -1 ? '<td data-rel="STATUS" data-statusid="' + Data.STATUSID + '" class="border padding">' + Data.STATUS + '</td>' : '') +
-				'<td data-rel="ACTION" class="padding"></td>' +
-				'</tr>'
-			);
+			var trEl = document.createElement('tr');
+			trEl.setAttribute('data-rel', data.GID);
 
-			var ActionTD = $(OCDLRSelf.QueueElt + '[data-rel="' + Data.GID + '"] > td[data-rel="ACTION"]');
+			var fnTd = document.createElement('td');
+			fnTd.setAttribute('data-rel', 'FILENAME');
+			fnTd.className = 'padding';
+			fnTd.textContent = data.FILENAME_SHORT || data.FILENAME || '';
+			trEl.appendChild(fnTd);
 
-			if (['add'].indexOf (View) > -1)
-			{
-				OCDLRSelf.ActionHide (ActionTD);
-				if (Data.STATUSID == 1)
-				{
-					OCDLRSelf.ActionPause (ActionTD, View);
+			var protoTd = document.createElement('td');
+			protoTd.setAttribute('data-rel', 'PROTO');
+			protoTd.className = 'border padding';
+			protoTd.textContent = tr(data.PROTO || '');
+			trEl.appendChild(protoTd);
+
+			var msgTd = document.createElement('td');
+			msgTd.setAttribute('data-rel', 'MESSAGE');
+			msgTd.className = 'border';
+			var pbWrap = document.createElement('div');
+			pbWrap.className = 'pb-wrap';
+			var pbVal = document.createElement('div');
+			pbVal.className = 'pb-value';
+			pbVal.style.width = data.PROGRESSVAL || '0%';
+			var pbTxt = document.createElement('div');
+			pbTxt.className = 'pb-text';
+			pbTxt.innerHTML = data.PROGRESS || '';
+			pbVal.appendChild(pbTxt);
+			pbWrap.appendChild(pbVal);
+			msgTd.appendChild(pbWrap);
+			trEl.appendChild(msgTd);
+
+			if (['add', 'actives', 'all'].indexOf(view) !== -1) {
+				var spTd = document.createElement('td');
+				spTd.setAttribute('data-rel', 'SPEED');
+				spTd.className = 'border padding';
+				spTd.textContent = data.SPEED || '--';
+				trEl.appendChild(spTd);
+			}
+
+			if (['add', 'all'].indexOf(view) !== -1) {
+				var stTd = document.createElement('td');
+				stTd.setAttribute('data-rel', 'STATUS');
+				stTd.setAttribute('data-statusid', String(data.STATUSID));
+				stTd.className = 'border padding';
+				stTd.textContent = data.STATUS || '';
+				trEl.appendChild(stTd);
+			}
+
+			var actionTd = document.createElement('td');
+			actionTd.setAttribute('data-rel', 'ACTION');
+			actionTd.className = 'padding';
+			trEl.appendChild(actionTd);
+
+			tbody.insertBefore(trEl, tbody.firstChild);
+
+			var headerActionTh = document.querySelector('#Queue thead th[data-rel="ACTION"]');
+
+			if (view === 'add') {
+				Utils.ActionHide(actionTd);
+				if (data.STATUSID === 1) {
+					Utils.ActionPause(actionTd, view);
+				} else if (data.STATUSID === 3) {
+					Utils.ActionPlay(actionTd, view);
 				}
-				else if (Data.STATUSID == 3)
-				{
-					OCDLRSelf.ActionPlay (ActionTD, View);
-				}
-
-				var HideAllButton = OCDLRSelf.Queue + '> thead th[data-rel="ACTION"] > div.icon-close';
-				if ($(HideAllButton).length == 0)
-				{
-					$(OCDLRSelf.Queue + '> thead th[data-rel="ACTION"]').append ('<div class="icon-close svg"></div>');
-					$(HideAllButton).bind ('click', function ()
-					{
-						OCDLRSelf.HideAllFromQueue ($(this));
+				if (headerActionTh && !headerActionTh.querySelector('.icon-close')) {
+					var hideAllBtn = document.createElement('div');
+					hideAllBtn.className = 'icon-close svg';
+					hideAllBtn.title = tr('Clean all');
+					hideAllBtn.addEventListener('click', function () {
+						Utils.HideAllFromQueue(hideAllBtn);
 					});
+					headerActionTh.appendChild(hideAllBtn);
 				}
 			}
-			if (['completes', 'waitings', 'stopped', 'actives'].indexOf (View) > -1)
-			{
-				OCDLRSelf.ActionDelete (ActionTD, OCDLRSelf.BadgerStatus[Data.STATUSID], View);
 
-				var RemoveAllButton = OCDLRSelf.Queue + '> thead th[data-rel="ACTION"] > div.icon-delete';
-				if ($(RemoveAllButton).length == 0)
-				{
-					$(OCDLRSelf.Queue + '> thead th[data-rel="ACTION"]').append ('<div class="icon-delete svg"></div>');
-					$(RemoveAllButton).bind ('click', function ()
-					{
-						OCDLRSelf.RemoveAllFromQueue ($(this), '', View);
+			if (['completes', 'waitings', 'stopped', 'actives'].indexOf(view) !== -1) {
+				Utils.ActionDelete(actionTd, Utils.BadgerStatus[data.STATUSID], view);
+				if (headerActionTh && !headerActionTh.querySelector('.icon-delete')) {
+					var rmAllBtn = document.createElement('div');
+					rmAllBtn.className = 'icon-delete svg';
+					rmAllBtn.title = tr('Remove all');
+					rmAllBtn.addEventListener('click', function () {
+						Utils.RemoveAllFromQueue(rmAllBtn, '', view);
 					});
+					headerActionTh.appendChild(rmAllBtn);
 				}
 			}
-			if (View == 'all')
-			{
-				if (Data.STATUSID == 4)
-				{
-					OCDLRSelf.ActionDeleteCompletely (ActionTD);
-				}
-				else
-				{
-					OCDLRSelf.ActionDelete (ActionTD, OCDLRSelf.BadgerStatus[Data.STATUSID], View);
 
-					if (Data.STATUSID == 1)
-					{
-						OCDLRSelf.ActionPause (ActionTD, View);
-					}
-					else if (Data.STATUSID == 3)
-					{
-						OCDLRSelf.ActionPlay (ActionTD, View);
+			if (view === 'all') {
+				if (data.STATUSID === 4) {
+					Utils.ActionDeleteCompletely(actionTd);
+				} else {
+					Utils.ActionDelete(actionTd, Utils.BadgerStatus[data.STATUSID], view);
+					if (data.STATUSID === 1) {
+						Utils.ActionPause(actionTd, view);
+					} else if (data.STATUSID === 3) {
+						Utils.ActionPlay(actionTd, view);
 					}
 				}
 			}
-			if (View == 'actives')
-			{
-				OCDLRSelf.ActionPause (ActionTD, View);
-			}
-			if (View == 'stopped')
-			{
-				OCDLRSelf.ActionPlay (ActionTD, View);
-			}
-			if (View == 'removed')
-			{
-				OCDLRSelf.ActionDeleteCompletely (ActionTD);
 
-				var CompletelyRemoveAllButton = OCDLRSelf.Queue + '> thead th[data-rel="ACTION"] > div.icon-delete';
-				if ($(CompletelyRemoveAllButton).length == 0)
-				{
-					$(OCDLRSelf.Queue + '> thead th[data-rel="ACTION"]').append ('<div class="icon-delete svg"></div>');
-					$(CompletelyRemoveAllButton).bind ('click', function ()
-					{
-						OCDLRSelf.RemoveAllFromQueue ($(this), 'completely', View);
+			if (view === 'actives') {
+				Utils.ActionPause(actionTd, view);
+			}
+			if (view === 'stopped') {
+				Utils.ActionPlay(actionTd, view);
+			}
+			if (view === 'removed') {
+				Utils.ActionDeleteCompletely(actionTd);
+				if (headerActionTh && !headerActionTh.querySelector('.icon-delete')) {
+					var purgeAllBtn = document.createElement('div');
+					purgeAllBtn.className = 'icon-delete svg';
+					purgeAllBtn.title = tr('Delete all');
+					purgeAllBtn.addEventListener('click', function () {
+						Utils.RemoveAllFromQueue(purgeAllBtn, 'completely', view);
 					});
+					headerActionTh.appendChild(purgeAllBtn);
+				}
+			}
+
+			return trEl;
+		},
+
+		RemoveQueueItem: function (rowEl) {
+			if (!rowEl || !rowEl.parentNode) {
+				return;
+			}
+			var tbody = rowEl.parentNode;
+			rowEl.remove();
+			if (tbody.children.length === 0) {
+				var th = document.querySelector('#Queue thead th[data-rel="ACTION"]');
+				if (th) {
+					th.textContent = '';
 				}
 			}
 		},
 
-		AddDownload: function (Button, TYPE, URL, OPTIONS)
-		{
-			var RESULT = false;
-
-			if (!Button.hasClass ('icon-loading-small'))
-			{
-				Button.children ('a').css ('display', 'none');
-				Button.addClass ('icon-loading-small');
-
-				$.ajax ({
-			        url: OC.generateUrl (OCDLRSelf.BaseURL + TYPE + 'downloader/add'),
-			        method: 'POST',
-					dataType: 'json',
-					data: {'FILE' : URL, 'OPTIONS' : OPTIONS},
-			        async: true,
-			        cache: false,
-			        timeout: 30000,
-			        success: function (Data)
-					{
-			            if (Data.ERROR)
-						{
-							OCDLRSelf.PrintError (Data.MESSAGE);
-						}
-						else
-						{
-							OCDLRSelf.PrintInfo (Data.MESSAGE + ' (' + Data.GID + ')');
-							OCDLRSelf.PrependToQueue (Data, 'add');
-
-							$('#ball').Badger ('+1');
-							if (Data.STATUSID == 1)
-							{
-								$('#bactives').Badger ('+1');
-							}
-							if (Data.STATUSID == 3)
-							{
-								$('#bwaitings').Badger ('+1');
-							}
-
-							RESULT = true;
-						}
-
-						// Reset add button
-						Button.children ('a').css ('display', 'block');
-						Button.removeClass ('icon-loading-small');
-			        }
-			    });
+		RemoveQueueItems: function (keepGids) {
+			var tbody = document.querySelector('#Queue tbody');
+			if (!tbody) {
+				return;
 			}
-
-			return RESULT;
+			tbody.querySelectorAll('tr').forEach(function (row) {
+				var rel = row.getAttribute('data-rel');
+				if (rel && rel !== 'LOADER' && keepGids.indexOf(rel) === -1) {
+					row.remove();
+				}
+			});
+			if (tbody.children.length === 0) {
+				var th = document.querySelector('#Queue thead th[data-rel="ACTION"]');
+				if (th) {
+					th.textContent = '';
+				}
+			}
 		},
 
-		ActionHide: function (TD)
-		{
-			TD.append ('<div class="icon-close svg"></div>');
-			TD.children ('div.icon-close').bind ('click', function ()
-			{
-				OCDLRSelf.HideFromQueue ($(this));
+		HideFromQueue: function (btn) {
+			var row = btn.closest('tr');
+			var gid = row ? row.getAttribute('data-rel') : '';
+			if (!gid) {
+				Utils.PrintError(tr('Unable to find the GID for this download'));
+				return;
+			}
+			btn.classList.remove('icon-close');
+			btn.classList.add('icon-loading-small');
+
+			apiRequest(Utils.BaseURL + 'queue/hide', 'POST', { GID: gid }).then(function (data) {
+				if (data.ERROR) {
+					Utils.PrintError(data.MESSAGE);
+					btn.classList.remove('icon-loading-small');
+					btn.classList.add('icon-close');
+				} else {
+					Utils.PrintInfo(data.MESSAGE + ' (' + gid + ')');
+					Utils.RemoveQueueItem(row);
+				}
 			});
 		},
 
-		ActionPause: function (TD, View)
-		{
-			if (OCDLRSelf.WhichDownloader == 'ARIA2')
-			{
-				TD.append ('<div class="icon-pause svg"></div>');
-				TD.children ('div.icon-pause').bind ('click', function ()
-				{
-					OCDLRSelf.PauseDownload ($(this), View);
+		HideAllFromQueue: function (btn) {
+			var gids = [];
+			document.querySelectorAll('#Queue tbody tr td[data-rel="ACTION"] > div.icon-close').forEach(function (b) {
+				var r = b.closest('tr');
+				if (r && r.getAttribute('data-rel')) {
+					b.classList.remove('icon-close');
+					b.classList.add('icon-loading-small');
+					gids.push(r.getAttribute('data-rel'));
+				}
+			});
+			if (gids.length === 0) {
+				Utils.PrintError(tr('No downloads in the queue'));
+				return;
+			}
+			btn.classList.remove('icon-close');
+			btn.classList.add('icon-loading-small');
+
+			apiRequest(Utils.BaseURL + 'queue/hideall', 'POST', { GIDS: gids }).then(function (data) {
+				if (data.ERROR) {
+					Utils.PrintError(data.MESSAGE);
+				} else {
+					Utils.PrintInfo(data.MESSAGE);
+					(data.QUEUE || []).forEach(function (entry) {
+						var r = document.querySelector('#Queue tbody tr[data-rel="' + cssEscapeAttr(entry.GID) + '"]');
+						if (r) {
+							r.remove();
+						}
+					});
+					btn.remove();
+				}
+			});
+		},
+
+		PauseDownload: function (btn, view) {
+			var row = btn.closest('tr');
+			var gid = row ? row.getAttribute('data-rel') : '';
+			if (!gid) {
+				return;
+			}
+			btn.classList.remove('icon-pause');
+			btn.classList.add('icon-loading-small');
+
+			apiRequest(Utils.BaseURL + 'queue/pause', 'POST', { GID: gid }).then(function (data) {
+				btn.classList.remove('icon-loading-small');
+				if (data.ERROR) {
+					Utils.PrintError(data.MESSAGE);
+					btn.classList.add('icon-pause');
+				} else {
+					window.OCDLR.setBadge('#bactives', '-1');
+					window.OCDLR.setBadge('#bstopped', '+1');
+					Utils.PrintInfo(data.MESSAGE + ' (' + gid + ')');
+					if (view === 'add' || view === 'all') {
+						var td = btn.parentNode;
+						btn.remove();
+						Utils.ActionPlay(td, view);
+						var st = row.querySelector('td[data-rel="STATUS"]');
+						if (st) {
+							st.setAttribute('data-statusid', '3');
+							st.textContent = tr('Paused');
+						}
+					} else {
+						Utils.RemoveQueueItem(row);
+					}
+				}
+			});
+		},
+
+		UnPauseDownload: function (btn, view) {
+			var row = btn.closest('tr');
+			var gid = row ? row.getAttribute('data-rel') : '';
+			if (!gid) {
+				return;
+			}
+			btn.classList.remove('icon-play');
+			btn.classList.add('icon-loading-small');
+
+			apiRequest(Utils.BaseURL + 'queue/unpause', 'POST', { GID: gid }).then(function (data) {
+				btn.classList.remove('icon-loading-small');
+				if (data.ERROR) {
+					Utils.PrintError(data.MESSAGE);
+					btn.classList.add('icon-play');
+				} else {
+					window.OCDLR.setBadge('#bactives', '+1');
+					window.OCDLR.setBadge('#bstopped', '-1');
+					Utils.PrintInfo(data.MESSAGE + ' (' + gid + ')');
+					if (view === 'add' || view === 'all') {
+						var td = btn.parentNode;
+						btn.remove();
+						Utils.ActionPause(td, view);
+						var st = row.querySelector('td[data-rel="STATUS"]');
+						if (st) {
+							st.setAttribute('data-statusid', '1');
+							st.textContent = tr('Active');
+						}
+					} else {
+						Utils.RemoveQueueItem(row);
+					}
+				}
+			});
+		},
+
+		RemoveFromQueue: function (btn, completely, view) {
+			var row = btn.closest('tr');
+			var gid = row ? row.getAttribute('data-rel') : '';
+			if (!gid) {
+				return;
+			}
+			btn.classList.remove('icon-delete');
+			btn.classList.add('icon-loading-small');
+
+			apiRequest(Utils.BaseURL + 'queue/' + completely + 'remove', 'POST', { GID: gid }).then(function (data) {
+				if (data.ERROR) {
+					Utils.PrintError(data.MESSAGE);
+					btn.classList.remove('icon-loading-small');
+					btn.classList.add('icon-delete');
+				} else {
+					Utils.PrintInfo(data.MESSAGE + ' (' + gid + ')');
+					if (view !== 'all' || completely.length > 0) {
+						Utils.RemoveQueueItem(row);
+					} else {
+						var td = btn.parentNode;
+						td.textContent = '';
+						var st = row.querySelector('td[data-rel="STATUS"]');
+						if (st) {
+							st.textContent = tr('Removed');
+						}
+						Utils.ActionDeleteCompletely(td);
+					}
+					Utils.GetCounters();
+				}
+			});
+		},
+
+		RemoveAllFromQueue: function (btn, completely, view) {
+			var gids = [];
+			document.querySelectorAll('#Queue tbody tr td[data-rel="ACTION"] > div.icon-delete').forEach(function (b) {
+				var r = b.closest('tr');
+				if (r && r.getAttribute('data-rel')) {
+					b.classList.remove('icon-delete');
+					b.classList.add('icon-loading-small');
+					gids.push(r.getAttribute('data-rel'));
+				}
+			});
+			if (gids.length === 0) {
+				return;
+			}
+			btn.classList.remove('icon-delete');
+			btn.classList.add('icon-loading-small');
+
+			apiRequest(Utils.BaseURL + 'queue/' + completely + 'removeall', 'POST', { GIDS: gids }).then(function (data) {
+				if (data.ERROR) {
+					Utils.PrintError(data.MESSAGE);
+				} else {
+					Utils.PrintInfo(data.MESSAGE);
+					(data.GIDS || []).forEach(function (gid) {
+						var r = document.querySelector('#Queue tbody tr[data-rel="' + cssEscapeAttr(gid) + '"]');
+						if (r) {
+							Utils.RemoveQueueItem(r);
+						}
+					});
+					Utils.GetCounters();
+				}
+			});
+		},
+
+		GetTorrentsList: function (listEl) {
+			if (!listEl) {
+				return;
+			}
+			if (listEl.style.display === 'block') {
+				listEl.style.display = 'none';
+				return;
+			}
+
+			listEl.textContent = '';
+			var loadingLi = document.createElement('li');
+			loadingLi.innerHTML = '<p class="loader"><span class="icon-loading-small"></span></p>';
+			listEl.appendChild(loadingLi);
+			listEl.style.display = 'block';
+
+			apiRequest(Utils.BaseURL + 'btdownloader/listtorrentfiles', 'POST', {}).then(function (data) {
+				if (data.ERROR) {
+					Utils.PrintError(data.MESSAGE);
+					return;
+				}
+				listEl.textContent = '';
+				var files = (data.FILES || []).filter(function (f) {
+					return f && typeof f.name === 'string' && /\.torrent$/i.test(f.name);
 				});
-			}
-		},
 
-		ActionPlay: function (TD, View)
-		{
-			if (OCDLRSelf.WhichDownloader == 'ARIA2')
-			{
-				TD.append ('<div class="icon-play svg"></div>');
-				TD.children ('div.icon-play').bind ('click', function ()
-				{
-					OCDLRSelf.UnPauseDownload ($(this), View);
+				if (files.length === 0) {
+					var emptyLi = document.createElement('li');
+					var p = document.createElement('p');
+					p.appendChild(document.createTextNode(tr('No Torrent Files') + ', '));
+					var a = document.createElement('a');
+					a.href = filesFolderUrl(Utils.TorrentsFolder);
+					a.textContent = tr('Upload');
+					p.appendChild(a);
+					emptyLi.appendChild(p);
+					listEl.appendChild(emptyLi);
+					return;
+				}
+
+				files.forEach(function (f) {
+					var li = document.createElement('li');
+					var p = document.createElement('p');
+					p.className = 'clickable';
+					p.textContent = f.name;
+					p.addEventListener('click', function (ev) {
+						ev.stopPropagation();
+						var anchor = listEl.parentNode.querySelector('a');
+						if (anchor) {
+							anchor.setAttribute('data-rel', 'File');
+							anchor.setAttribute('data-filename', f.name);
+							anchor.textContent = f.name;
+							var caret = document.createElement('div');
+							caret.className = 'icon-caret-dark svg';
+							anchor.appendChild(caret);
+						}
+						listEl.style.display = 'none';
+					});
+					li.appendChild(p);
+					listEl.appendChild(li);
 				});
+			});
+		},
+
+		GetCounters: function () {
+			apiRequest(Utils.BaseURL + 'queue/count', 'POST', {}).then(function (data) {
+				if (!data.ERROR && data.COUNTER) {
+					Utils.applyCounters(data.COUNTER);
+				}
+			}).catch(function () {});
+		},
+
+		AddDownload: function (btn, type, url, options) {
+			if (!btn || btn.classList.contains('icon-loading-small')) {
+				return;
 			}
+			var labelAnchor = btn.querySelector('a');
+			if (labelAnchor) {
+				labelAnchor.style.display = 'none';
+			}
+			btn.classList.add('icon-loading-small');
+
+			apiRequest(Utils.BaseURL + type + 'downloader/add', 'POST', { FILE: url, OPTIONS: options || {} })
+				.then(function (data) {
+					if (data.ERROR) {
+						Utils.PrintError(data.MESSAGE);
+						return;
+					}
+					Utils.PrintInfo(data.MESSAGE + ' (' + data.GID + ')');
+					var row = Utils.PrependToQueue(data, 'add');
+					if (row) {
+						Utils.updateRowElement(row, data, 'add');
+					}
+					Utils.GetCounters();
+				})
+				.catch(function (err) {
+					Utils.PrintError(err && err.message ? err.message : tr('Unable to launch download'));
+				})
+				.finally(function () {
+					if (labelAnchor) {
+						labelAnchor.style.display = 'block';
+					}
+					btn.classList.remove('icon-loading-small');
+				});
 		},
 
-		ActionDelete: function (TD, Status, View)
-		{
-			TD.append ('<div class="icon-delete svg"></div>');
-			TD.children ('div.icon-delete').bind ('click', function ()
-			{
-				$('#bremoved').Badger ('+1');
-				$('#b' + Status).Badger ('-1');
-				OCDLRSelf.RemoveFromQueue ($(this), '', View);
+		ActionHide: function (td) {
+			var d = document.createElement('div');
+			d.className = 'icon-close svg';
+			d.title = tr('Hide from add queue');
+			d.addEventListener('click', function () {
+				Utils.HideFromQueue(d);
 			});
+			td.appendChild(d);
 		},
 
-		ActionDeleteCompletely: function (TD)
-		{
-			TD.append ('<div class="icon-delete svg"></div>');
-			TD.children ('div.icon-delete').bind ('click', function ()
-			{
-				$('#bremoved').Badger ('-1');
-				$('#ball').Badger ('-1');
-				OCDLRSelf.RemoveFromQueue ($(this), 'completely', 'removed');
+		ActionPause: function (td, view) {
+			if (Utils.WhichDownloader !== 'ARIA2') {
+				return;
+			}
+			var d = document.createElement('div');
+			d.className = 'icon-pause svg';
+			d.title = tr('Pause');
+			d.addEventListener('click', function () {
+				Utils.PauseDownload(d, view);
 			});
+			td.appendChild(d);
+		},
+
+		ActionPlay: function (td, view) {
+			if (Utils.WhichDownloader !== 'ARIA2') {
+				return;
+			}
+			var d = document.createElement('div');
+			d.className = 'icon-play svg';
+			d.title = tr('Resume');
+			d.addEventListener('click', function () {
+				Utils.UnPauseDownload(d, view);
+			});
+			td.appendChild(d);
+		},
+
+		ActionDelete: function (td, status, view) {
+			var d = document.createElement('div');
+			d.className = 'icon-delete svg';
+			d.title = tr('Remove');
+			d.addEventListener('click', function () {
+				Utils.RemoveFromQueue(d, '', view);
+			});
+			td.appendChild(d);
+		},
+
+		ActionDeleteCompletely: function (td) {
+			var d = document.createElement('div');
+			d.className = 'icon-delete svg';
+			d.title = tr('Delete permanently');
+			d.addEventListener('click', function () {
+				Utils.RemoveFromQueue(d, 'completely', 'removed');
+			});
+			td.appendChild(d);
 		}
 	};
 
-	var OCDLRSelf = OCDLR.Utils;
-
-	OCDLRSelf.GetPersonalSettings ();
-	OCDLRSelf.GetAdminSettings (['WhichDownloader']);
-	OCDLRSelf.Queue = OCDLRSelf.BaseID + '#Queue ';
-	OCDLRSelf.QueueHeader = OCDLRSelf.Queue + 'thead tr';
-	OCDLRSelf.QueueElt = OCDLRSelf.Queue + 'tbody tr';
-	OCDLRSelf.BadgerStatus = ['completes', 'actives', 'waitings', 'stopped'];
+	window.OCDLR.Utils = Utils;
 })();

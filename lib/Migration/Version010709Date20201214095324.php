@@ -6,120 +6,94 @@ namespace OCA\Ocdownloader\Migration;
 
 use Closure;
 use OCP\DB\ISchemaWrapper;
+use OCP\DB\Types;
 use OCP\Migration\IOutput;
 use OCP\Migration\SimpleMigrationStep;
 
-/**
- * Auto-generated migration step: Please modify to your needs!
- */
 class Version010709Date20201214095324 extends SimpleMigrationStep {
-
-	/**
-	 * @param IOutput $output
-	 * @param Closure $schemaClosure The `\Closure` returns a `ISchemaWrapper`
-	 * @param array $options
-	 */
-	public function preSchemaChange(IOutput $output, Closure $schemaClosure, array $options) {
-	}
-
-	/**
-	 * @param IOutput $output
-	 * @param Closure $schemaClosure The `\Closure` returns a `ISchemaWrapper`
-	 * @param array $options
-	 * @return null|ISchemaWrapper
-	 */
-	public function changeSchema(IOutput $output, Closure $schemaClosure, array $options) {
+	public function changeSchema(IOutput $output, Closure $schemaClosure, array $options): ?ISchemaWrapper {
 		/** @var ISchemaWrapper $schema */
 		$schema = $schemaClosure();
 
 		if (!$schema->hasTable('ocdownloader_queue')) {
 			$table = $schema->createTable('ocdownloader_queue');
-			$table->addColumn('ID', 'integer', [
+			$table->addColumn('id', Types::INTEGER, [
 				'autoincrement' => true,
 				'notnull' => true,
-				'length' => 4,
 			]);
-			$table->addColumn('UID', 'string', [
+			$table->addColumn('uid', Types::STRING, [
 				'notnull' => false,
 				'length' => 64,
 			]);
-			$table->addColumn('GID', 'string', [
+			$table->addColumn('gid', Types::STRING, [
 				'notnull' => true,
-				'length' => 32,
+				'length' => 64,
 			]);
-			$table->addColumn('FILENAME', 'string', [
+			$table->addColumn('filename', Types::STRING, [
 				'notnull' => true,
-				'length' => 255,
+				'length' => 512,
 			]);
-			$table->addColumn('PROTOCOL', 'string', [
+			$table->addColumn('protocol', Types::STRING, [
 				'notnull' => true,
-				'length' => 10,
+				'length' => 64,
 			]);
-			$table->addColumn('STATUS', 'smallint', [
+			$table->addColumn('status', Types::SMALLINT, [
 				'notnull' => true,
-				'length' => 1,
 				'default' => 1,
 			]);
-			$table->addColumn('IS_CLEANED', 'smallint', [
+			$table->addColumn('is_cleaned', Types::SMALLINT, [
 				'notnull' => true,
-				'length' => 1,
 				'default' => 0,
 			]);
-			$table->addColumn('TIMESTAMP', 'bigint', [
+			$table->addColumn('timestamp', Types::BIGINT, [
 				'notnull' => true,
-				'length' => 15,
 				'default' => 0,
 			]);
-			$table->setPrimaryKey(['ID']);
+			$table->setPrimaryKey(['id']);
+			$table->addIndex(['uid', 'status'], 'ocdl_queue_uid_status');
+			$table->addIndex(['uid', 'gid'], 'ocdl_queue_uid_gid');
 		}
 
 		if (!$schema->hasTable('ocdownloader_admin')) {
 			$table = $schema->createTable('ocdownloader_admin');
-			$table->addColumn('ID', 'integer', [
+			$table->addColumn('id', Types::INTEGER, [
 				'autoincrement' => true,
 				'notnull' => true,
-				'length' => 4,
 			]);
-			$table->addColumn('KEY', 'string', [
+			$table->addColumn('cfg_key', Types::STRING, [
 				'notnull' => true,
 				'length' => 100,
 			]);
-			$table->addColumn('VAL', 'string', [
+			$table->addColumn('cfg_val', Types::STRING, [
 				'notnull' => false,
-				'length' => 255,
+				'length' => 512,
 			]);
-			$table->setPrimaryKey(['ID']);
+			$table->setPrimaryKey(['id']);
+			$table->addUniqueIndex(['cfg_key'], 'ocdl_admin_cfg_key');
 		}
 
 		if (!$schema->hasTable('ocdownloader_personal')) {
 			$table = $schema->createTable('ocdownloader_personal');
-			$table->addColumn('ID', 'integer', [
+			$table->addColumn('id', Types::INTEGER, [
 				'autoincrement' => true,
 				'notnull' => true,
-				'length' => 4,
 			]);
-			$table->addColumn('UID', 'string', [
+			$table->addColumn('uid', Types::STRING, [
 				'notnull' => true,
 				'length' => 64,
 			]);
-			$table->addColumn('KEY', 'string', [
+			$table->addColumn('cfg_key', Types::STRING, [
 				'notnull' => true,
 				'length' => 100,
 			]);
-			$table->addColumn('VAL', 'string', [
+			$table->addColumn('cfg_val', Types::STRING, [
 				'notnull' => false,
-				'length' => 255,
+				'length' => 512,
 			]);
-			$table->setPrimaryKey(['ID']);
+			$table->setPrimaryKey(['id']);
+			$table->addIndex(['uid', 'cfg_key'], 'ocdl_pers_uid_key');
 		}
-		return $schema;
-	}
 
-	/**
-	 * @param IOutput $output
-	 * @param Closure $schemaClosure The `\Closure` returns a `ISchemaWrapper`
-	 * @param array $options
-	 */
-	public function postSchemaChange(IOutput $output, Closure $schemaClosure, array $options) {
+		return $schema;
 	}
 }

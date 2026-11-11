@@ -1,79 +1,56 @@
 /**
- * ownCloud - ocDownloader
- *
- * This file is licensed under the Affero General Public License version 3 or
- * later. See the LICENSE file.
- *
- * @author Xavier Beurois <www.sgc-univ.net>
- * @copyright Xavier Beurois 2015
+ * Vanilla DOM badge helper compatible with Nextcloud 28-35 (no jQuery dependency).
  */
-(function ($)
-{
-	$.fn.Badger = function (Badge, Callback)
-	{
-  		var BadgerExists = this.find ('.badger-outter').html ();
-  		Badge = Badge.toString();
-		
-  		// Clear the badge
-  		if (!Badge)
-  		{
-  			if (BadgerExists)
-  			{
-				this.find ('.badger-outter').remove ();
+(function () {
+	'use strict';
+
+	window.OCDLR = window.OCDLR || {};
+
+	window.OCDLR.setBadge = function (target, badgeValue) {
+		var el = typeof target === 'string' ? document.querySelector(target) : target;
+		if (!el) {
+			return;
+		}
+
+		var outer = el.querySelector('.badger-outter');
+		if (badgeValue === null || badgeValue === undefined || badgeValue === '') {
+			if (outer) {
+				outer.remove();
 			}
-  		}
-  		else
-  		{
-			// Figuring out badge data
-			var OldBadge = this.find ('.badger-badge').text ();
-			if (Badge.charAt (0) == '+')
-			{
-				if (isNaN (Badge.substr (1)))
-				{
-					Badge = OldBadge + Badge.substr (1);
-				}
-				else
-				{
-					Badge = Math.round (Number (OldBadge) + Number (Badge.substr (1)));
-				}
-			}
-			else if (Badge.charAt (0) == '-')
-			{ 
-				if (isNaN (Badge.substr (1)))
-				{
-					Badge = OldBadge - Badge.substr (1);
-				}
-				else
-				{
-					Badge = Math.round (Number (OldBadge) - Number (Badge.substr (1)));
-				}
-			}
-				
-			// Don't add duplicates
-			if (BadgerExists)
-			{
-				this.find ('.badger-badge').html (Badge);
-			}
-			else
-			{
-				this.append ('<div class="badger-outter"><div class="badger-inner"><p class="badger-badge badger-number">' + Badge + '</p></div></div>');
-			}
-				
-			// Badger text or number class
-			if (isNaN (Badge))
-			{
-				this.find ('.badger-badge').removeClass ('badger-number').addClass ('badger-text');
-			}
-			else
-			{
-				this.find ('.badger-badge').removeClass ('badger-text').addClass ('badger-number');
-			}
-			
-			// Send back badge
-			if (Callback)
-			{
-				callback (Badge);
-			}
+			return;
+		}
+
+		var badgeStr = String(badgeValue);
+		var badgeEl = el.querySelector('.badger-badge');
+		var oldText = badgeEl ? badgeEl.textContent : '0';
+
+		if (badgeStr.charAt(0) === '+') {
+			var inc = Number(badgeStr.slice(1));
+			badgeStr = isNaN(inc) ? (oldText + badgeStr.slice(1)) : String(Math.max(0, Math.round((Number(oldText) || 0) + inc)));
+		} else if (badgeStr.charAt(0) === '-') {
+			var dec = Number(badgeStr.slice(1));
+			badgeStr = isNaN(dec) ? oldText : String(Math.max(0, Math.round((Number(oldText) || 0) - dec)));
+		}
+
+		if (!outer) {
+			outer = document.createElement('div');
+			outer.className = 'badger-outter';
+			var inner = document.createElement('div');
+			inner.className = 'badger-inner';
+			badgeEl = document.createElement('p');
+			badgeEl.className = 'badger-badge badger-number';
+			inner.appendChild(badgeEl);
+			outer.appendChild(inner);
+			el.appendChild(outer);
+		}
+
+		badgeEl.textContent = badgeStr;
+		if (isNaN(Number(badgeStr))) {
+			badgeEl.classList.remove('badger-number');
+			badgeEl.classList.add('badger-text');
+		} else {
+			badgeEl.classList.remove('badger-text');
+			badgeEl.classList.add('badger-number');
 		}
 	};
-})(jQuery);
+})();

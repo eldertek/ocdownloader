@@ -1,28 +1,63 @@
+form#ocdownloader.section {
+	max-width: 900px;
+}
+
 form#ocdownloader > p {
-	margin-bottom: 5px;
+	margin-bottom: 10px;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
 }
-form#ocdownloader > p > span.OCDSLoader {
-	padding: 10px;
+
+form#ocdownloader label {
+	min-width: 220px;
+	font-weight: 500;
+}
+
+form#ocdownloader .ocd-clear {
+	clear: both;
+}
+
+form#ocdownloader span.OCDSLoader {
+	padding: 8px;
 	display: none;
 	margin-left: 0.5em;
 }
-form#ocdownloader > p > span.msg {
+
+form#ocdownloader span.msg {
 	display: none;
-	padding: 3px;
-	font-size: 10pt;
+	padding: 3px 8px;
+	font-size: 13px;
 	margin-left: 0.5em;
-	border-radius: 3px;
+	border-radius: 4px;
 }
-form#ocdownloader > p > input.OCDDownloadsFolder, form#ocdownloader > p > input.OCDTorrentsFolder {
-	width: 400px;
+
+form#ocdownloader span.msg.error {
+	color: var(--color-error, #ce2c31);
+	font-weight: 600;
 }
-form#ocdownloader > p > span.info {
+
+form#ocdownloader span.msg.success {
+	color: var(--color-success, #2d8659);
+	font-weight: 600;
+}
+
+form#ocdownloader input.OCDDownloadsFolder,
+form#ocdownloader input.OCDTorrentsFolder {
+	width: 360px;
+	max-width: 100%;
+}
+
+form#ocdownloader span.info {
 	font-style: italic;
-	color: #003366;
+	color: var(--color-text-maxcontrast, #555);
 }
+
 form#ocdownloader > hr {
-	width: 800px;
-	color: #99CCFF;
-	background-color: #66CCFF;
-	float: left;
+	width: 100%;
+	max-width: 800px;
+	border: 0;
+	border-top: 1px solid var(--color-border, #ddd);
+	margin: 14px 0;
 }

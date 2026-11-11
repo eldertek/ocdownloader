@@ -1,36 +1,48 @@
 <?xml version="1.0"?>
-<info>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
 	<id>ocdownloader</id>
 	<name>ocDownloader</name>
-	<summary>Easy to use download manager for Nextcloud</summary>
-	<description>Easy to use download manager using Curl/Aria2 and youtube-dl to allow downloading HTTP(S), FTP(S), YouTube videos and BitTorrent files. For more information on how to install, please go to https://github.com/e-alfred/ocdownloader/blob/master/README.md
-
-	</description>
-	<version>1.9.1</version>
-	<licence>agpl</licence>
+	<summary>Download manager for Nextcloud using Aria2, cURL, and yt-dlp</summary>
+	<description><![CDATA[Download manager for Nextcloud using Aria2, cURL, and yt-dlp (with youtube-dl fallback) to download HTTP(S), FTP(S), video streams, Magnet links, and BitTorrent files directly into your Nextcloud storage.]]></description>
+	<version>2.0.0</version>
+	<licence>AGPL-3.0-or-later</licence>
 	<author>e-alfred</author>
 	<author>Nibbels</author>
 	<author>Xavier Beurois</author>
-	<website>https://github.com/e-alfred/ocdownloader</website>
-	<bugs>https://github.com/e-alfred/ocdownloader/issues</bugs>
-	<documentation>https://github.com/e-alfred/ocdownloader/</documentation>
+	<author>André Théo LAURET</author>
+	<namespace>Ocdownloader</namespace>
+	<types>
+		<filesystem/>
+	</types>
+	<documentation>
+		<admin>https://github.com/eldertek/ocdownloader#readme</admin>
+	</documentation>
+	<category>files</category>
+	<category>tools</category>
+	<website>https://github.com/eldertek/ocdownloader</website>
+	<bugs>https://github.com/eldertek/ocdownloader/issues</bugs>
+	<repository type="git">https://github.com/eldertek/ocdownloader.git</repository>
 	<screenshot>https://raw.githubusercontent.com/e-alfred/ocdownloader/master/appinfo/Screenshot.jpg</screenshot>
-	<repository>https://github.com/e-alfred/</repository>
+	<donation>https://patreon.com/eldertek</donation>
+	<donation>https://github.com/sponsors/eldertek</donation>
 	<dependencies>
-		<nextcloud min-version="24" max-version="24" />
+		<php min-version="8.1" max-version="8.5"/>
 		<lib>curl</lib>
+		<nextcloud min-version="28" max-version="35"/>
 	</dependencies>
-
-    <navigations>
-        <navigation>
-            <name>ocDownloader</name>
-            <route>ocdownloader.Index.Add</route>
-            <order>99</order>
-        </navigation>
-    </navigations>
-
-    <settings>
-        <admin>OCA\Ocdownloader\Settings\Admin</admin>
-        <personal>OCA\Ocdownloader\Settings\Personal</personal>
-    </settings>
+	<settings>
+		<admin>OCA\Ocdownloader\Settings\Admin</admin>
+		<admin-section>OCA\Ocdownloader\Settings\AdminSection</admin-section>
+		<personal>OCA\Ocdownloader\Settings\Personal</personal>
+		<personal-section>OCA\Ocdownloader\Settings\PersonalSection</personal-section>
+	</settings>
+	<navigations>
+		<navigation>
+			<name>ocDownloader</name>
+			<route>ocdownloader.index.add</route>
+			<icon>ocdownloader.svg</icon>
+			<order>99</order>
+		</navigation>
+	</navigations>
 </info>
