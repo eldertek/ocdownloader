@@ -144,3 +144,8 @@ André Théo LAURET
 - Add upload / download speed limit settings in the admin panel
 - Add a ratio control for the BitTorrent protocol in the personal settings panel (default : unlimited - "0.0")
 - Add a seed time control for the BitTorrent protocol in the personal settings panel (default : 1 week)
+
+## Commercial Support & Custom Integration
+
+Need custom features, enterprise integration, or priority support?
+Maintained by **[Eclipse Technology](https://eclipse-technology.eu)** ([contact@eclipse-technology.eu](mailto:contact@eclipse-technology.eu)).
